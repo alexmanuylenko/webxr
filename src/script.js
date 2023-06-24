@@ -20,38 +20,9 @@ let center, diag, diagLength, toCameraPosVector, lookAtVector
 let mixer //: THREE.AnimationMixer
 let modelReady = false
 let played = false
-const animationActions /*: THREE.AnimationAction[]*/ = []
 let activeAction //: THREE.AnimationAction
-let lastAction //: THREE.AnimationAction
-
-const animations = {
-  default: function () {
-      setAction(animationActions[0])
-  },
-  // samba: function () {
-  //     setAction(animationActions[1])
-  // },
-  // bellydance: function () {
-  //     setAction(animationActions[2])
-  // },
-  // goofyrunning: function () {
-  //     setAction(animationActions[3])
-  // },
-}
 
 const clock = new THREE.Clock()
-
-const setAction = (toAction /*: THREE.AnimationAction*/) => {
-  //if (toAction != activeAction) {
-      lastAction = activeAction
-      activeAction = toAction
-      //lastAction.stop()
-      lastAction.fadeOut(1)
-      activeAction.reset()
-      activeAction.fadeIn(1)
-      activeAction.play()
-  //}
-}
 
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
@@ -130,9 +101,6 @@ async function init() {
     mixer = new THREE.AnimationMixer(mesh)
     activeAction = mixer.clipAction(gltf.animations[0])
     console.log('Active action: ' + activeAction)
-    // const animationAction = mixer.clipAction(gltf.animations[0])
-    // animationActions.push(animationAction)
-    // activeAction = animationActions[0]
 
     traverseObjectVertices(mesh, (vertex) => { 
       min.x = Math.min(min.x, vertex.x)
@@ -204,7 +172,6 @@ function onWindowResize() {
 }
 
 function play() {
-    // animations.default()
     if (!activeAction) {
       console.log('No active action')
       return
