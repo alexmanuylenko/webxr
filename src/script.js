@@ -1,15 +1,10 @@
 import './style.css'
-// import * as THREE from 'https://unpkg.com/three/build/three.module.js';
-// import { ARButton } from 'https://unpkg.com/three/examples/jsm/webxr/ARButton.js';
-// import * as GLTFLoader from 'https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js'
-// import { GLTFLoader } from 'https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js'
 import * as THREE from 'three'
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 let camera, canvas, scene, renderer;
-let fire;
-//let mesh;
+let mesh;
 
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
@@ -27,56 +22,29 @@ async function init() {
 
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(70,
+  camera = new THREE.PerspectiveCamera(70, 
     window.innerWidth / window.innerHeight,
     0.01,
     40
   );
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  //renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.xr.enabled = true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.xr.enabled = true
 
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-  light.position.set(0.5, 1, 0.25);
-  scene.add(light);
+  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1)
+  light.position.set(0.5, 1, 0.25)
+  scene.add(light)
 
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader()
 
-  //let fire;
   loader.load("https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb", function(gltf) {
-    fire = gltf.scene;
-    // fire.traverse( function (child) {
-    //   if (child.isMesh) {
-    //     child.geometry.center();
-    //   }
-    // });
-    fire.translateY(-0.25);
-    fire.translateZ(-0.45);
-    fire.scale.set(0.025, 0.025, 0.025);
-    fire.visible = false;
-    scene.add(fire);
+    mesh = gltf.scene;
+    mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
+    mesh.visible = false;
+    scene.add(mesh);
   });
-
-  // // setup a cone mesh to put on top of the image target when it is seen
-  // const radius = 0.2;
-  // const height = 0.3;
-  // const geometry = new THREE.ConeGeometry(radius, height, 32);
-  // //by defualt the image will be rendered in the middle, so we need to push half of the height up to be exactly on top of the img
-  // geometry.translate(0, height / 2, 0);
-
-  // const material = new THREE.MeshNormalMaterial({
-  //   transparent: true,
-  //   opacity: 0.5,
-  //   side: THREE.DoubleSide
-  // });
-
-  // mesh = new THREE.Mesh(geometry, material);
-  // mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
-  // mesh.visible = false;
-  // scene.add(mesh);
 
   // setup the image target
   const img = document.getElementById('img');
@@ -106,8 +74,7 @@ async function init() {
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  //renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -134,16 +101,10 @@ function render(timestamp, frame) {
 
       if (state == "tracked") {
         console.log("Image target has been found")
-        if (!fire.visible) {
-          fire.visible = true;
-          //mesh.visible = true;
-          // update the cone mesh when the image target is found
-          fire.matrix.fromArray(pose.transform.matrix);
-          //mesh.matrix.fromArray(pose.transform.matrix);  
-        }
+        mesh.visible = true;
+        mesh.matrix.fromArray(pose.transform.matrix);
       } else if (state == "emulated") {
-        //fire.visible = false;
-        //mesh.visible = false;
+        mesh.visible = false;
         console.log("Image target no longer seen")
       }
     }
