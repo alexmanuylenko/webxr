@@ -3,8 +3,19 @@ import * as THREE from 'three'
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-let camera, canvas, scene, renderer;
-let mesh;
+// TODO: Move to JSON settings
+const SKY_COLOR = 0xffffff 
+const GROUND_COLOR = 0xbbbbff
+const LIGHT_INTENSITY = 1
+const LIGHT_POSITION = new THREE.Vector3(0.5, 1, 0.25)
+const HEIGHT_DISTANCE = 1.0
+const DIAGONAL_FRONT_DISTANCE = 1.5
+
+let camera, canvas, scene, renderer, mesh
+let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
+let max = new THREE.Vector3(Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE)
+let width, height, length, scaleFactor
+let center, diag, diagLength, toCameraPosVector, lookAtVector
 
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
@@ -17,6 +28,43 @@ function setupMobileDebug() {
   devToolEl.style.height = '40%'; // control the height of the dev tool panel
 }
 
+function traverseObjectVertices(obj, callback) {
+  const front = new Array;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      front.push(obj[i]);
+    }
+  } else {
+    front.push(obj);
+  }
+  while (front.length > 0) {
+    // pop have better performance than shif, and we can go from back in this case
+    const obj = front.pop();
+    if (obj) {
+      if (obj instanceof THREE.Mesh && obj.geometry !== undefined) {
+        const vertices = obj.geometry.vertices;
+        const vertex = new THREE.Vector3();
+        if (vertices === undefined && obj.geometry.attributes !== undefined && "position" in obj.geometry.attributes) {
+          const pos = obj.geometry.attributes.position;
+          for (let i = 0; i < pos.count * pos.itemSize; i += pos.itemSize) {
+            vertex.set(pos.array[i], pos.array[i + 1], pos.array[i + 2]);
+            callback(vertex.applyMatrix4(obj.matrixWorld));
+          }
+        } else {
+          for (let i = 0; i < vertices.length; ++i) {
+            callback(vertex.copy(vertices[i]).applyMatrix4(obj.matrixWorld));
+          }
+        }
+      }
+      if (obj.children !== undefined) {
+        for (const child of obj.children) {
+          front.push(child);
+        }
+      }
+    }
+  }
+}
+
 async function init() {
   canvas = document.querySelector('canvas.webgl')
 
@@ -27,21 +75,53 @@ async function init() {
     0.01,
     40
   );
+  camera.matrixAutoUpdate = false;
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.xr.enabled = true
 
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1)
-  light.position.set(0.5, 1, 0.25)
+  const light = new THREE.HemisphereLight(SKY_COLOR, GROUND_COLOR, LIGHT_INTENSITY)
+  light.position.set(LIGHT_POSITION.x, LIGHT_POSITION.y, LIGHT_POSITION.z)
   scene.add(light)
 
   const loader = new GLTFLoader()
 
   loader.load("https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb", function(gltf) {
     mesh = gltf.scene;
-    mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
+    traverseObjectVertices(mesh, (vertex) => { 
+      min.x = Math.min(min.x, vertex.x)
+      min.y = Math.min(min.y, vertex.y)
+      min.z = Math.min(min.z, vertex.z)
+    
+      max.x = Math.max(max.x, vertex.x)
+      max.y = Math.max(max.y, vertex.y)
+      max.z = Math.max(max.z, vertex.z)
+    })
+    center = new THREE.Vector3((min.x + max.x) / 2.0, (min.y + max.y) / 2.0, (min.z + max.z) / 2.0)
+    diag = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
+    diagLength = diag.length()
+    width = Math.abs(max.x - min.x)
+    height = Math.abs(max.y - min.y)
+    length = Math.abs(max.z - min.z)
+    scaleFactor = 1.0;
+    if (width > height) {
+      if (width > length) {
+        scaleFactor = width
+      }
+      else { // if (length > width)
+        scaleFactor = length
+      }
+    } else { // if (height > width)
+      if (height > length) {
+        scaleFactor = height
+      }
+      else { // if (length > height)
+        scaleFactor = length
+      }
+    }
+    //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
     scene.add(mesh);
   });
@@ -79,39 +159,82 @@ function onWindowResize() {
 }
 
 function animate() {
-  renderer.setAnimationLoop(render);
+  renderer.setAnimationLoop(render)
 }
 
-function render(timestamp, frame) {
-  if (frame) {
-    const results = frame.getImageTrackingResults(); //checking if there are any images we track
+async function updateCamera(pose) {
+  if (!pose) { return }
+  let view = pose.views[0]
+    
+  // Use the view's transform matrix and projection matrix to configure the THREE.camera.
+  camera.matrix.fromArray(view.transform.matrix)
+  camera.projectionMatrix.fromArray(view.projectionMatrix)
+  camera.updateMatrixWorld(true)
 
-    //if we have more than one image the results are an array 
-    for (const result of results) {
-      // The result's index is the image's position in the trackedImages array specified at session creation
-      const imageIndex = result.index;
+  lookAtVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+  toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
 
-      // Get the pose of the image relative to a reference space.
-      const referenceSpace = renderer.xr.getReferenceSpace();
-      const pose = frame.getPose(result.imageSpace, referenceSpace);
+  console.log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
+  console.log('camera up: (' + camera.up.x + ', ' + camera.up.y + ', ' + camera.up.z + ')')
+  console.log('lookAtVector: (' + lookAtVector.x + ', ' + lookAtVector.y + ', ' + lookAtVector.z + ')')
+  console.log('toCameraPosVector: (' + toCameraPosVector.x + ', ' + toCameraPosVector.y + ', ' + toCameraPosVector.z + ')')
+}
 
-      //checking the state of the tracking
-      const state = result.trackingState;
-      console.log(state);
+async function updateMesh() {
+  let newPosition = new THREE.Vector3(
+    camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
+    camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
+    camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
+  )
+  
+  mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+}
 
-      if (state == "tracked") {
-        console.log("Image target has been found")
-        mesh.visible = true;
-        mesh.matrix.fromArray(pose.transform.matrix);
-      } else if (state == "emulated") {
-        mesh.visible = false;
-        console.log("Image target no longer seen")
-      }
+async function showMesh() {
+  mesh.visible = true
+}
+
+async function hideMesh() {
+  mesh.visible = false
+}
+
+async function renderFrame(timestamp, frame) {
+  if (!frame) { 
+    return 
+  }
+
+  let referenceSpace = renderer.xr.getReferenceSpace()
+  let pose = frame.getViewerPose(referenceSpace)
+  updateCamera(pose)
+  updateMesh()
+
+  //checking if there are any images we track
+  const results = frame.getImageTrackingResults()
+  
+  //if we have more than one image the results are an array 
+  for (const result of results) {
+    // The result's index is the image's position in the trackedImages array specified at session creation
+    const imageIndex = result.index;
+
+    //checking the state of the tracking
+    const state = result.trackingState;
+    console.log(state);
+
+    if (state == "tracked") {
+      console.log("Image target has been found")
+      showMesh()
+    } else if (state == "emulated") {
+      // hideMesh()
+      console.log("Image target no longer seen")
     }
   }
-  renderer.render(scene, camera);
+}
+
+async function render(timestamp, frame) {
+  renderFrame(timestamp, frame)
+  renderer.render(scene, camera)
 }
 
 setupMobileDebug()
-init();
-animate();
+init()
+animate()
