@@ -17,6 +17,42 @@ let max = new THREE.Vector3(Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE
 let width, height, length, scaleFactor
 let center, diag, diagLength, toCameraPosVector, lookAtVector
 
+let mixer //: THREE.AnimationMixer
+let modelReady = false
+let played = false
+const animationActions /*: THREE.AnimationAction[]*/ = []
+let activeAction //: THREE.AnimationAction
+let lastAction //: THREE.AnimationAction
+
+const animations = {
+  default: function () {
+      setAction(animationActions[0])
+  },
+  // samba: function () {
+  //     setAction(animationActions[1])
+  // },
+  // bellydance: function () {
+  //     setAction(animationActions[2])
+  // },
+  // goofyrunning: function () {
+  //     setAction(animationActions[3])
+  // },
+}
+
+const clock = new THREE.Clock()
+
+const setAction = (toAction /*: THREE.AnimationAction*/) => {
+  //if (toAction != activeAction) {
+      lastAction = activeAction
+      activeAction = toAction
+      //lastAction.stop()
+      lastAction.fadeOut(1)
+      activeAction.reset()
+      activeAction.fadeIn(1)
+      activeAction.play()
+  //}
+}
+
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
   // This library is very big so only use it while debugging - just comment it out when your app is done
@@ -90,6 +126,14 @@ async function init() {
 
   loader.load("https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb", function(gltf) {
     mesh = gltf.scene;
+ 
+    mixer = new THREE.AnimationMixer(mesh)
+    activeAction = mixer.clipAction(gltf.animations[0])
+    console.log('Active action: ' + activeAction)
+    // const animationAction = mixer.clipAction(gltf.animations[0])
+    // animationActions.push(animationAction)
+    // activeAction = animationActions[0]
+
     traverseObjectVertices(mesh, (vertex) => { 
       min.x = Math.min(min.x, vertex.x)
       min.y = Math.min(min.y, vertex.y)
@@ -124,6 +168,7 @@ async function init() {
     //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
     scene.add(mesh);
+    modelReady = true
   });
 
   // setup the image target
@@ -156,6 +201,21 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function play() {
+    // animations.default()
+    if (!activeAction) {
+      console.log('No active action')
+      return
+    }
+    
+    console.log('Active action in animate: ' + activeAction)
+    activeAction.reset()
+    activeAction.fadeIn(1)
+    activeAction.play()
+
+    played = true
 }
 
 function animate() {
@@ -199,6 +259,9 @@ async function hideMesh() {
 }
 
 async function renderFrame(timestamp, frame) {
+  if (!played) play()
+  if (modelReady) mixer.update(clock.getDelta())
+
   if (!frame) { 
     return 
   }
