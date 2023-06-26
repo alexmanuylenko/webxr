@@ -128,19 +128,6 @@ function createARButton(imgBitmap) {
   return button
 }
 
-function getMaxDimension(width, height, length) {
-  if (width > height) {
-    if (width > length) {
-      return width
-    }
-    return length
-  }
-  if (height > length) {
-    return height
-  }
-  return length
-}
-
 async function init() {
   canvas = document.querySelector('canvas.webgl')
 
@@ -188,7 +175,7 @@ async function init() {
     width = Math.abs(max.x - min.x)
     height = Math.abs(max.y - min.y)
     length = Math.abs(max.z - min.z)
-    scaleFactor = getMaxDimension(width, height, length);
+    scaleFactor = Math.max(width, Math.max(height, length))
 
     //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
