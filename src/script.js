@@ -11,7 +11,7 @@ const LIGHT_POSITION = new THREE.Vector3(0.5, 1, 0.25)
 const HEIGHT_DISTANCE = 1.0
 const DIAGONAL_FRONT_DISTANCE = 1.5
 
-let camera, canvas, scene, renderer, mesh
+let camera, canvas, scene, renderer, mesh, targetMesh
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
 let max = new THREE.Vector3(Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE)
 let width, height, length, scaleFactor
@@ -72,6 +72,75 @@ function traverseObjectVertices(obj, callback) {
   }
 }
 
+async function setupImageTarget() {
+  const img = document.getElementById('img')
+  const imgBitmap = await createImageBitmap(img)
+  console.log(imgBitmap)
+  return imgBitmap
+}
+
+function createTargetMesh(texture) {
+  var material = new THREE.MeshBasicMaterial( {
+    'map': texture,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.DoubleSide
+  })
+  const geometry = new THREE.BufferGeometry();
+  const vertices = new Float32Array( [
+    -1.0, -1.0,  -5.0, // v0
+     1.0, -1.0,  -5.0, // v1
+     1.0,  1.0,  -5.0, // v2
+    -1.0,  1.0,  -5.0, // v3
+  ] )
+  const indices = [
+    0, 1, 2,
+    2, 3, 0,
+  ]
+  const uv = new Float32Array([
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
+  ])
+  geometry.setIndex( indices );
+  geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+  geometry.setAttribute( 'uv', new THREE.BufferAttribute( uv, 2 ) );
+  return new THREE.Mesh(geometry, material)
+}
+
+function createARButton(imgBitmap) {
+  //more on image-tracking feature: https://github.com/immersive-web/marker-tracking/blob/main/explainer.md
+  const button = ARButton.createButton(renderer, {
+    requiredFeatures: ["image-tracking"], // notice a new required feature
+    trackedImages: [
+      {
+        image: imgBitmap, // tell webxr this is the image target we want to track
+        widthInMeters: 0.7 // in meters what the size of the PRINTED image in the real world
+      }
+    ],
+    //this is for the mobile debug
+    optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
+    domOverlay: {
+      root: document.body
+    }
+  });
+  return button
+}
+
+function getMaxDimension(width, height, length) {
+  if (width > height) {
+    if (width > length) {
+      return width
+    }
+    return length
+  }
+  if (height > length) {
+    return height
+  }
+  return length
+}
+
 async function init() {
   canvas = document.querySelector('canvas.webgl')
 
@@ -111,55 +180,33 @@ async function init() {
       max.y = Math.max(max.y, vertex.y)
       max.z = Math.max(max.z, vertex.z)
     })
+
     center = new THREE.Vector3((min.x + max.x) / 2.0, (min.y + max.y) / 2.0, (min.z + max.z) / 2.0)
     diag = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
     diagLength = diag.length()
+
     width = Math.abs(max.x - min.x)
     height = Math.abs(max.y - min.y)
     length = Math.abs(max.z - min.z)
-    scaleFactor = 1.0;
-    if (width > height) {
-      if (width > length) {
-        scaleFactor = width
-      }
-      else { // if (length > width)
-        scaleFactor = length
-      }
-    } else { // if (height > width)
-      if (height > length) {
-        scaleFactor = height
-      }
-      else { // if (length > height)
-        scaleFactor = length
-      }
-    }
+    scaleFactor = getMaxDimension(width, height, length);
+
     //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
     scene.add(mesh);
     modelReady = true
-  });
 
-  // setup the image target
-  const img = document.getElementById('img');
-  const imgBitmap = await createImageBitmap(img);
-  console.log(imgBitmap);
-
-  //more on image-tracking feature: https://github.com/immersive-web/marker-tracking/blob/main/explainer.md
-  const button = ARButton.createButton(renderer, {
-    requiredFeatures: ["image-tracking"], // notice a new required feature
-    trackedImages: [
-      {
-        image: imgBitmap, // tell webxr this is the image target we want to track
-        widthInMeters: 0.7 // in meters what the size of the PRINTED image in the real world
-      }
-    ],
-    //this is for the mobile debug
-    optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
-    domOverlay: {
-      root: document.body
-    }
+    var textureLoader = new THREE.TextureLoader()
+    textureLoader.load('https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg', (texture) => {
+  
+      var targetMesh = createTargetMesh(texture)
+      targetMesh.visible = true
+      scene.add(targetMesh);
+    
+      var imgBitmap = setupImageTarget()
+      const button = createARButton(imgBitmap)
+      document.body.appendChild(button);
+    })  
   });
-  document.body.appendChild(button);
 
   window.addEventListener("resize", onWindowResize, false);
 }
