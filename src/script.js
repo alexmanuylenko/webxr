@@ -185,7 +185,7 @@ async function init() {
     var textureLoader = new THREE.TextureLoader()
     textureLoader.load('https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg', (texture) => {
   
-      var targetMesh = createTargetMesh(texture)
+      targetMesh = createTargetMesh(texture)
       targetMesh.visible = true
       scene.add(targetMesh);
     
