@@ -10,6 +10,7 @@ const LIGHT_INTENSITY = 1
 const LIGHT_POSITION = new THREE.Vector3(0.5, 1, 0.25)
 const HEIGHT_DISTANCE = 1.0
 const DIAGONAL_FRONT_DISTANCE = 1.5
+const TARGET_MESH_DISTANCE = 3.0
 
 let camera, canvas, scene, renderer, mesh, targetMesh
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
@@ -21,6 +22,8 @@ let mixer //: THREE.AnimationMixer
 let modelReady = false
 let played = false
 let activeAction //: THREE.AnimationAction
+
+let targetMeshVisible = true
 
 const clock = new THREE.Clock()
 
@@ -88,10 +91,10 @@ function createTargetMesh(texture) {
   })
   const geometry = new THREE.BufferGeometry();
   const vertices = new Float32Array( [
-    -1.0, -1.0,  -5.0, // v0
-     1.0, -1.0,  -5.0, // v1
-     1.0,  1.0,  -5.0, // v2
-    -1.0,  1.0,  -5.0, // v3
+    -1.0, -1.0,  0.0, // v0
+     1.0, -1.0,  0.0, // v1
+     1.0,  1.0,  0.0, // v2
+    -1.0,  1.0,  0.0, // v3
   ] )
   const indices = [
     0, 1, 2,
@@ -138,7 +141,7 @@ async function init() {
     0.01,
     40
   );
-  camera.matrixAutoUpdate = false;
+  camera.matrixAutoUpdate = true;
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -183,13 +186,13 @@ async function init() {
     modelReady = true
 
     var textureLoader = new THREE.TextureLoader()
-    textureLoader.load('https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg', (texture) => {
+    textureLoader.load('https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg', async function(texture) {
   
       targetMesh = createTargetMesh(texture)
-      targetMesh.visible = true
+      targetMesh.visible = false
       scene.add(targetMesh);
     
-      var imgBitmap = setupImageTarget()
+      var imgBitmap = await setupImageTarget()
       const button = createARButton(imgBitmap)
       document.body.appendChild(button);
     })  
@@ -228,11 +231,12 @@ async function updateCamera(pose) {
   let view = pose.views[0]
     
   // Use the view's transform matrix and projection matrix to configure the THREE.camera.
-  camera.matrix.fromArray(view.transform.matrix)
-  camera.projectionMatrix.fromArray(view.projectionMatrix)
-  camera.updateMatrixWorld(true)
+  //camera.matrix.fromArray(view.transform.matrix)
+  //camera.projectionMatrix.fromArray(view.projectionMatrix)
+  //camera.updateMatrixWorld(true)
 
   lookAtVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+  lookAtVector = lookAtVector.normalize()
   toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
 
   console.log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
@@ -249,6 +253,36 @@ async function updateMesh() {
   )
   
   mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  mesh.lookAt(camera.position)
+  
+  // camera.rotation.eulerOrder = 'XZY';
+  // mesh.rotation.eulerOrder = 'XZY';
+  // mesh.rotation.copy(camera.rotation)
+  // mesh.rotation.y += Math.PI;
+  // mesh.rotation.z = -camera.rotation.z;
+  // if (camera.position.z < 0.0) {
+  //   mesh.rotation.z = camera.rotation.z;
+  // }
+}
+
+async function updateTargetMesh() {
+  let newPosition = new THREE.Vector3(
+    camera.position.x + TARGET_MESH_DISTANCE * lookAtVector.x,
+    camera.position.y + TARGET_MESH_DISTANCE * lookAtVector.y,
+    camera.position.z + TARGET_MESH_DISTANCE * lookAtVector.z,
+  )
+
+  targetMesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  targetMesh.lookAt(camera.position)
+
+  // camera.rotation.eulerOrder = 'XZY';
+  // targetMesh.rotation.eulerOrder = 'XZY';  
+  // targetMesh.rotation.copy(camera.rotation)
+  // targetMesh.rotation.y += Math.PI;
+  // targetMesh.rotation.z = -camera.rotation.z;
+  // if (camera.position.z < 0.0) {
+  //   targetMesh.rotation.z = camera.rotation.z;
+  // }
 }
 
 async function showMesh() {
@@ -257,6 +291,14 @@ async function showMesh() {
 
 async function hideMesh() {
   mesh.visible = false
+}
+
+async function showTargetMesh() {
+  targetMesh.visible = true
+}
+
+async function hideTargetMesh() {
+  targetMesh.visible = false
 }
 
 async function renderFrame(timestamp, frame) {
@@ -271,6 +313,12 @@ async function renderFrame(timestamp, frame) {
   let pose = frame.getViewerPose(referenceSpace)
   updateCamera(pose)
   updateMesh()
+  updateTargetMesh()
+
+  showTargetMesh()
+  if (!targetMeshVisible) {
+    hideTargetMesh()
+  }
 
   //checking if there are any images we track
   const results = frame.getImageTrackingResults()
@@ -284,11 +332,13 @@ async function renderFrame(timestamp, frame) {
     const state = result.trackingState;
     console.log(state);
 
+    targetMeshVisible = true
     if (state == "tracked") {
       console.log("Image target has been found")
+      targetMeshVisible = false
       showMesh()
     } else if (state == "emulated") {
-      // hideMesh()
+      hideMesh()
       console.log("Image target no longer seen")
     }
   }
