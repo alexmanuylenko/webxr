@@ -402,19 +402,7 @@ function stop() {
   played = false
 }
 
-function animate() {
-  renderer.setAnimationLoop(render)
-}
-
-async function updateCamera(pose) {
-  if (!pose) { return }
-  let view = pose.views[0]
-    
-  // Use the view's transform matrix and projection matrix to configure the THREE.camera.
-  //camera.matrix.fromArray(view.transform.matrix)
-  //camera.projectionMatrix.fromArray(view.projectionMatrix)
-  //camera.updateMatrixWorld(true)
-
+async function updateFromCamera() {
   lookAtVector = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(camera.quaternion)
   lookAtVector = lookAtVector.normalize()
   toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
@@ -467,16 +455,16 @@ async function hideTargetMesh() {
   targetMesh.visible = false
 }
 
+async function update() {
+  updateFromCamera()
+  updateMesh()
+  updateTargetMesh()
+}
+
 async function renderFrame(timestamp, frame) {
   if (!frame) { 
     return 
   }
-
-  let referenceSpace = renderer.xr.getReferenceSpace()
-  let pose = frame.getViewerPose(referenceSpace)
-  updateCamera(pose)
-  updateMesh()
-  updateTargetMesh()
 
   showTargetMesh()
   if (!targetMeshVisible) {
@@ -504,20 +492,26 @@ async function renderFrame(timestamp, frame) {
       if (modelReady) mixer.update(clock.getDelta())    
       showMesh()
     } else if (state == "emulated") {
+      if (played) stop()
       hideMesh()
       console.log("Image target no longer seen")
     }
   }
 }
 
-async function render(timestamp, frame) {
+async function mainLoop(timestamp, frame) {
   startHudTimer()
+  update()
   updateHud()
   renderFrame(timestamp, frame)
   renderer.render(scene, camera)
   endHudTimer()
 }
 
+function main() {
+  renderer.setAnimationLoop(mainLoop)
+}
+
 setupMobileDebug()
 init()
-animate()
+main()
