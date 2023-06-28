@@ -25,7 +25,168 @@ let activeAction //: THREE.AnimationAction
 
 let targetMeshVisible = true
 
+let hudCanvas, hudCtx, hudTexture, hudPlane
+let hudCustom1, hudCustom2, hudCustom3
+let hudTimer = performance || Date
+let hudMsActive = false
+let hudMsStart = hudTimer.now()
+let hudMsEnd = hudTimer.now()
+let hudMsGraphData = new Array(32).fill(0)
+let hudMs = 0
+let hudDisplayRefreshDelay = 100
+let hudFpsLastTime = hudTimer.now()
+let hudFpsFrames = 0
+let hudFpsGraphData = new Array(32).fill(0)
+
+//let hudCamera, hudScene
+
 const clock = new THREE.Clock()
+
+function createHud(/*scene, camera*/) {
+  // hudCamera = camera;
+  // if (hudCamera.parent === null) {
+  //   hudScene.add(hudCamera);
+  // }
+
+  hudCanvas = document.createElement("canvas")
+  hudCanvas.width = 64
+  hudCanvas.height = 64
+
+  //hudCanvas = document.querySelector('canvas.webgl')
+
+  hudCtx = hudCanvas.getContext("2d")
+  hudTexture = new THREE.Texture(hudCanvas)
+  
+  const hudMaterial = new THREE.MeshBasicMaterial({
+    map: hudTexture,
+    depthTest: false,
+    transparent: true,
+  })
+  
+  const hudGeometry = new THREE.PlaneGeometry(1, 1, 1, 1)
+
+  hudPlane = new THREE.Mesh(hudGeometry, hudMaterial)
+  hudPlane.position.x = 0
+  hudPlane.position.y = 1.5
+  hudPlane.position.z = -5
+  hudPlane.renderOrder = 9999
+
+  //hudCamera.add(hudPlane)
+  camera.add(hudPlane)
+}
+
+function setHudEnabled(enabled) {
+  hudPlane.visible = enabled
+}
+
+function setHudX(val) {
+  hudPlane.position.x = val
+}
+
+function setHudY(val) {
+  hudPlane.position.y = val
+}
+
+function setHudZ(val) {
+  hudPlane.position.z = val
+}
+
+function setHudCustom1(val) {
+  hudCustom1 = val
+}
+
+function setHudCustom2(val) {
+  hudCustom2 = val
+}
+
+function setHudCustom3(val) {
+  hudCustom3 = val
+}
+
+function startHudTimer() {
+  hudMsActive = true
+  hudMsStart = hudTimer.now()
+}
+
+function endHudTimer() {
+  hudMsEnd = hudTimer.now()
+  hudMs = ((hudMsEnd - hudMsStart) * 100) / 100
+}
+
+function addToHud(object3d) {
+  //hudCamera.add(object3d)
+  camera.add(object3d)
+}
+
+function updateHud() {
+  hudTexture.needsUpdate = true;
+
+  const now = hudTimer.now();
+  const dt = now - hudFpsLastTime;
+  hudFpsFrames++;
+  if (now > hudFpsLastTime + hudDisplayRefreshDelay) {
+    hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+
+    //FPS
+    hudFpsLastTime = now;
+    var FPS = ((((hudFpsFrames * 1000) / dt) * 100) / 100).toFixed(2);
+    hudFpsFrames = 0;
+
+    hudFpsGraphData.push(FPS);
+    if (hudFpsGraphData.length >= 32) {
+      hudFpsGraphData.shift();
+    }
+    var ratio = Math.max.apply(null, hudFpsGraphData);
+
+    hudCtx.strokeStyle = "#035363";
+    for (var i = 0; i < 32; i++) {
+      hudCtx.beginPath();
+      hudCtx.moveTo(i, 16);
+      hudCtx.lineTo(i, 16 - (hudFpsGraphData[i] / ratio) * 16);
+      hudCtx.stroke();
+    }
+
+    hudCtx.font = "13px Calibri";
+    hudCtx.fillStyle = "#00cc00";
+    hudCtx.fillText(FPS, 1, 13);
+
+    //MS
+    if (hudMsActive) {
+      hudMsGraphData.push(hudMs);
+      if (hudMsGraphData.length >= 32) {
+        hudMsGraphData.shift();
+      }
+      ratio = Math.max.apply(null, hudMsGraphData);
+      hudCtx.strokeStyle = "#f35363";
+      for (var i = 0; i < 32; i++) {
+        hudCtx.beginPath();
+        hudCtx.moveTo(i + 32, 16);
+        hudCtx.lineTo(i + 32, 16 - (hudMsGraphData[i] / ratio) * 16);
+        hudCtx.stroke();
+      }
+      hudCtx.font = "13px Calibri";
+      hudCtx.fillStyle = "#00ccff";
+      hudCtx.fillText(hudMs.toFixed(2), 33, 13);
+    }
+
+    //Custom
+    if (hudCustom1) {
+      hudCtx.font = "11px";
+      hudCtx.fillStyle = "#ffffff";
+      hudCtx.fillText(hudCustom1, 0, 29);
+    }
+    if (hudCustom2) {
+      hudCtx.font = "11px";
+      hudCtx.fillStyle = "#ffffff";
+      hudCtx.fillText(hudCustom2, 0, 45);
+    }
+    if (hudCustom3) {
+      hudCtx.font = "11px";
+      hudCtx.fillStyle = "#ffffff";
+      hudCtx.fillText(hudCustom3, 0, 61);
+    }
+  }
+}
 
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
@@ -152,6 +313,11 @@ async function init() {
   light.position.set(LIGHT_POSITION.x, LIGHT_POSITION.y, LIGHT_POSITION.z)
   scene.add(light)
 
+  createHud()
+  // setHudX(-0.5)
+  // setHudY(0.5)
+  // setHudZ(-0.5)
+
   const loader = new GLTFLoader()
 
   loader.load("https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb", function(gltf) {
@@ -235,10 +401,12 @@ async function updateCamera(pose) {
   //camera.projectionMatrix.fromArray(view.projectionMatrix)
   //camera.updateMatrixWorld(true)
 
-  lookAtVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+  lookAtVector = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(camera.quaternion)
   lookAtVector = lookAtVector.normalize()
   toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
 
+  camera.up = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(camera.quaternion)
+  
   console.log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
   console.log('camera up: (' + camera.up.x + ', ' + camera.up.y + ', ' + camera.up.z + ')')
   console.log('lookAtVector: (' + lookAtVector.x + ', ' + lookAtVector.y + ', ' + lookAtVector.z + ')')
@@ -254,15 +422,7 @@ async function updateMesh() {
   
   mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
   mesh.lookAt(camera.position)
-  
-  // camera.rotation.eulerOrder = 'XZY';
-  // mesh.rotation.eulerOrder = 'XZY';
-  // mesh.rotation.copy(camera.rotation)
-  // mesh.rotation.y += Math.PI;
-  // mesh.rotation.z = -camera.rotation.z;
-  // if (camera.position.z < 0.0) {
-  //   mesh.rotation.z = camera.rotation.z;
-  // }
+  mesh.up =camera.up
 }
 
 async function updateTargetMesh() {
@@ -274,15 +434,7 @@ async function updateTargetMesh() {
 
   targetMesh.position.set(newPosition.x, newPosition.y, newPosition.z)
   targetMesh.lookAt(camera.position)
-
-  // camera.rotation.eulerOrder = 'XZY';
-  // targetMesh.rotation.eulerOrder = 'XZY';  
-  // targetMesh.rotation.copy(camera.rotation)
-  // targetMesh.rotation.y += Math.PI;
-  // targetMesh.rotation.z = -camera.rotation.z;
-  // if (camera.position.z < 0.0) {
-  //   targetMesh.rotation.z = camera.rotation.z;
-  // }
+  targetMesh.up = camera.up
 }
 
 async function showMesh() {
@@ -345,8 +497,11 @@ async function renderFrame(timestamp, frame) {
 }
 
 async function render(timestamp, frame) {
+  startHudTimer()
+  updateHud()
   renderFrame(timestamp, frame)
   renderer.render(scene, camera)
+  endHudTimer()
 }
 
 setupMobileDebug()
