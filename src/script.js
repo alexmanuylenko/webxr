@@ -422,7 +422,7 @@ async function updateMesh() {
   
   mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
   mesh.lookAt(camera.position)
-  mesh.up =camera.up
+  mesh.up = camera.up
 }
 
 async function updateTargetMesh() {
