@@ -376,16 +376,30 @@ function onWindowResize() {
 
 function play() {
     if (!activeAction) {
-      console.log('No active action')
+      console.log('Play: No active action')
       return
     }
+    console.log('Play: Active action: ' + activeAction)
     
-    console.log('Active action in animate: ' + activeAction)
     activeAction.reset()
     activeAction.fadeIn(1)
     activeAction.play()
 
     played = true
+}
+
+function stop() {
+  if (!activeAction) {
+    console.log('Stop: No active action')
+    return
+  }
+  console.log('Stop: Active action: ' + activeAction)
+
+  activeAction.fadeOut(1)
+  activeAction.stop()
+  activeAction.reset()
+
+  played = false
 }
 
 function animate() {
@@ -454,9 +468,6 @@ async function hideTargetMesh() {
 }
 
 async function renderFrame(timestamp, frame) {
-  if (!played) play()
-  if (modelReady) mixer.update(clock.getDelta())
-
   if (!frame) { 
     return 
   }
@@ -472,6 +483,8 @@ async function renderFrame(timestamp, frame) {
     hideTargetMesh()
   }
 
+  targetMeshVisible = true
+
   //checking if there are any images we track
   const results = frame.getImageTrackingResults()
   
@@ -484,10 +497,11 @@ async function renderFrame(timestamp, frame) {
     const state = result.trackingState;
     console.log(state);
 
-    targetMeshVisible = true
     if (state == "tracked") {
       console.log("Image target has been found")
       targetMeshVisible = false
+      if (!played) play()
+      if (modelReady) mixer.update(clock.getDelta())    
       showMesh()
     } else if (state == "emulated") {
       hideMesh()
