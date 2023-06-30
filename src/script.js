@@ -346,6 +346,9 @@ async function init() {
     length = Math.abs(max.z - min.z)
     scaleFactor = Math.max(width, Math.max(height, length))
 
+    //mesh.rotateX(Math.PI / 2.0)
+    mesh.scale.set(1.0 / scaleFactor, 1.0 / scaleFactor, 1.0 / scaleFactor)
+
     //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
     scene.add(mesh);
@@ -457,7 +460,7 @@ async function hideTargetMesh() {
 
 async function update() {
   updateFromCamera()
-  updateMesh()
+  //updateMesh()
   updateTargetMesh()
 }
 
@@ -465,6 +468,8 @@ async function renderFrame(timestamp, frame) {
   if (!frame) { 
     return 
   }
+
+  const referenceSpace = renderer.xr.getReferenceSpace();
 
   showTargetMesh()
   if (!targetMeshVisible) {
@@ -481,6 +486,9 @@ async function renderFrame(timestamp, frame) {
     // The result's index is the image's position in the trackedImages array specified at session creation
     const imageIndex = result.index;
 
+    // Get the pose of the image relative to a reference space.
+    const pose = frame.getPose(result.imageSpace, referenceSpace);
+
     //checking the state of the tracking
     const state = result.trackingState;
     console.log(state);
@@ -489,7 +497,9 @@ async function renderFrame(timestamp, frame) {
       console.log("Image target has been found")
       targetMeshVisible = false
       if (!played) play()
-      if (modelReady) mixer.update(clock.getDelta())    
+      if (modelReady) mixer.update(clock.getDelta())
+      mesh.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z)
+      //mesh.matrix.fromArray(pose.transform.matrix);
       showMesh()
     } else if (state == "emulated") {
       if (played) stop()
