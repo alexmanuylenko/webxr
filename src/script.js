@@ -6,11 +6,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import './style.css'
 
 // TODO: Move to settings config file, unique for each page/model or JSON:
-// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
-const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
+const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
+// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/bender.glb"
-// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
-const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png'
+const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
+// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png'
 // const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/bender.png'
 const SKY_COLOR = 0xffffff 
 const GROUND_COLOR = 0xbbbbff
@@ -27,9 +27,9 @@ const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
 const MESH_MODEL_ROTATE = new THREE.Vector3(0.0, 0.0, 0.0)
 const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0)
 
-const ANIMATED = false
+const ANIMATED = true
 
-const ROTATED = true // TODO
+const ROTATED = false // TODO
 const ROTATION_DELTA = Math.PI / 12.0 //TODO
 
 // If this is set to true copy position and orientation, but NOT scale to mesh from image transformation
