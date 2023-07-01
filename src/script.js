@@ -450,11 +450,21 @@ async function updateMesh() {
 }
 
 async function updateMeshByPose(pose) {
-  mesh.position.set(
+  let position = new THREE.Vector3(
     pose.transform.position.x + MESH_MODEL_TRANSLATE.x, 
     pose.transform.position.y + MESH_MODEL_TRANSLATE.y, 
     pose.transform.position.z + MESH_MODEL_TRANSLATE.z)
-  //mesh.matrix.fromArray(pose.transform.matrix);
+  let lookAt = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(pose.transform.orientation) 
+  lookAt = lookAt.normalize()
+  let target = new THREE.Vector3(
+    position.x + lookAt.x,
+    position.y + lookAt.y,
+    position.z + lookAt.z
+  )
+  mesh.position.set(position.x, position.y, position.z)
+  mesh.lookAt(target)
+  mesh.up = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(pose.transform.orientation) // just for some case
+  // mesh.matrix.fromArray(pose.transform.matrix);
 }
 
 async function updateTargetMesh() {
