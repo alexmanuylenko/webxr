@@ -3,7 +3,9 @@ import * as THREE from 'three'
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-// TODO: Move to JSON settings
+// TODO: Move to settings config file, unique for each page/model or JSON:
+const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
+const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
 const SKY_COLOR = 0xffffff 
 const GROUND_COLOR = 0xbbbbff
 const LIGHT_INTENSITY = 1
@@ -11,6 +13,13 @@ const LIGHT_POSITION = new THREE.Vector3(0.5, 1, 0.25)
 const HEIGHT_DISTANCE = 1.0
 const DIAGONAL_FRONT_DISTANCE = 1.5
 const TARGET_MESH_DISTANCE = 3.0
+const DEFAULT_HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
+const HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
+
+// Mesh model processing (centring) parameters:
+const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
+const MESH_MODEL_ROTATE = new THREE.Vector3(0.0, 0.0, 0.0)
+const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0) 
 
 let camera, canvas, scene, renderer, mesh, targetMesh
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
@@ -38,21 +47,21 @@ let hudFpsLastTime = hudTimer.now()
 let hudFpsFrames = 0
 let hudFpsGraphData = new Array(32).fill(0)
 
-//let hudCamera, hudScene
+let hudCamera, hudScene
 
 const clock = new THREE.Clock()
 
-function createHud(/*scene, camera*/) {
-  // hudCamera = camera;
-  // if (hudCamera.parent === null) {
-  //   hudScene.add(hudCamera);
-  // }
+function createHud(_scene, _camera) {
+  hudScene = _scene
+  hudCamera = _camera;
+  if (hudCamera.parent === null) {
+    hudScene.add(hudCamera);
+  }
 
+  // hudCanvas = document.querySelector('canvas.webgl')
   hudCanvas = document.createElement("canvas")
   hudCanvas.width = 64
   hudCanvas.height = 64
-
-  //hudCanvas = document.querySelector('canvas.webgl')
 
   hudCtx = hudCanvas.getContext("2d")
   hudTexture = new THREE.Texture(hudCanvas)
@@ -66,12 +75,12 @@ function createHud(/*scene, camera*/) {
   const hudGeometry = new THREE.PlaneGeometry(1, 1, 1, 1)
 
   hudPlane = new THREE.Mesh(hudGeometry, hudMaterial)
-  hudPlane.position.x = 0
-  hudPlane.position.y = 1.5
-  hudPlane.position.z = -5
+  hudPlane.position.x = DEFAULT_HUD_POSITION.x
+  hudPlane.position.y = DEFAULT_HUD_POSITION.y
+  hudPlane.position.z = DEFAULT_HUD_POSITION.z
   hudPlane.renderOrder = 9999
 
-  //hudCamera.add(hudPlane)
+  hudCamera.add(hudPlane)
   camera.add(hudPlane)
 }
 
@@ -114,7 +123,7 @@ function endHudTimer() {
 }
 
 function addToHud(object3d) {
-  //hudCamera.add(object3d)
+  hudCamera.add(object3d)
   camera.add(object3d)
 }
 
@@ -303,6 +312,9 @@ async function init() {
     40
   );
   camera.matrixAutoUpdate = true;
+  if (camera.parent === null) {
+    scene.add(camera);
+  }
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -313,14 +325,14 @@ async function init() {
   light.position.set(LIGHT_POSITION.x, LIGHT_POSITION.y, LIGHT_POSITION.z)
   scene.add(light)
 
-  createHud()
-  // setHudX(-0.5)
-  // setHudY(0.5)
-  // setHudZ(-0.5)
+  createHud(scene, camera)
+  setHudX(HUD_POSITION.x)
+  setHudY(HUD_POSITION.y)
+  setHudZ(HUD_POSITION.z)
 
   const loader = new GLTFLoader()
 
-  loader.load("https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb", function(gltf) {
+  loader.load(MESH_MODEL_FILE_NAME_URL, function(gltf) {
     mesh = gltf.scene;
  
     mixer = new THREE.AnimationMixer(mesh)
@@ -345,9 +357,15 @@ async function init() {
     height = Math.abs(max.y - min.y)
     length = Math.abs(max.z - min.z)
     scaleFactor = Math.max(width, Math.max(height, length))
-
-    //mesh.rotateX(Math.PI / 2.0)
-    mesh.scale.set(1.0 / scaleFactor, 1.0 / scaleFactor, 1.0 / scaleFactor)
+    let rScaleFactor = 1.0 / scaleFactor
+    
+    mesh.scale.set(MESH_MODEL_SCALE.x * rScaleFactor, MESH_MODEL_SCALE.y * rScaleFactor, MESH_MODEL_SCALE.z * rScaleFactor)
+    mesh.rotateX(MESH_MODEL_ROTATE.x)
+    mesh.rotateY(MESH_MODEL_ROTATE.y)
+    mesh.rotateZ(MESH_MODEL_ROTATE.z)
+    mesh.translateX(MESH_MODEL_TRANSLATE.x)
+    mesh.translateY(MESH_MODEL_TRANSLATE.y)
+    mesh.translateZ(MESH_MODEL_TRANSLATE.z)
 
     //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
     mesh.visible = false;
@@ -355,7 +373,7 @@ async function init() {
     modelReady = true
 
     var textureLoader = new THREE.TextureLoader()
-    textureLoader.load('https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg', async function(texture) {
+    textureLoader.load(TEXTURE_MARKER_IMAGE_FILE_NAME_URL, async function(texture) {
   
       targetMesh = createTargetMesh(texture)
       targetMesh.visible = false
@@ -419,15 +437,24 @@ async function updateFromCamera() {
 }
 
 async function updateMesh() {
-  let newPosition = new THREE.Vector3(
-    camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
-    camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
-    camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
-  )
+  // TODO
+  // let newPosition = new THREE.Vector3(
+  //   camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
+  //   camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
+  //   camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
+  // )
   
-  mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
-  mesh.lookAt(camera.position)
-  mesh.up = camera.up
+  // mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  // mesh.lookAt(camera.position)
+  // mesh.up = camera.up
+}
+
+async function updateMeshByPose(pose) {
+  mesh.position.set(
+    pose.transform.position.x + MESH_MODEL_TRANSLATE.x, 
+    pose.transform.position.y + MESH_MODEL_TRANSLATE.y, 
+    pose.transform.position.z + MESH_MODEL_TRANSLATE.z)
+  //mesh.matrix.fromArray(pose.transform.matrix);
 }
 
 async function updateTargetMesh() {
@@ -460,7 +487,7 @@ async function hideTargetMesh() {
 
 async function update() {
   updateFromCamera()
-  //updateMesh()
+  updateMesh()
   updateTargetMesh()
 }
 
@@ -498,8 +525,7 @@ async function renderFrame(timestamp, frame) {
       targetMeshVisible = false
       if (!played) play()
       if (modelReady) mixer.update(clock.getDelta())
-      mesh.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z)
-      //mesh.matrix.fromArray(pose.transform.matrix);
+      updateMeshByPose(pose)
       showMesh()
     } else if (state == "emulated") {
       if (played) stop()
