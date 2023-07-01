@@ -1,11 +1,17 @@
-import './style.css'
 import * as THREE from 'three'
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+// Not sure if we really need this:
+import './style.css'
+
 // TODO: Move to settings config file, unique for each page/model or JSON:
-const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
-const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
+// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
+const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
+// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/bender.glb"
+// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
+const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png'
+// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/bender.png'
 const SKY_COLOR = 0xffffff 
 const GROUND_COLOR = 0xbbbbff
 const LIGHT_INTENSITY = 1
@@ -19,7 +25,20 @@ const HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
 // Mesh model processing (centring) parameters:
 const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
 const MESH_MODEL_ROTATE = new THREE.Vector3(0.0, 0.0, 0.0)
-const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0) 
+const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0)
+
+const ANIMATED = false
+
+const ROTATED = true // TODO
+const ROTATION_DELTA = Math.PI / 12.0 //TODO
+
+// If this is set to true copy position and orientation, but NOT scale to mesh from image transformation
+const RIGID_TRANSFORMED = false //TODO
+
+// If this is set to true simply copy transform matrix ( + position + orientation AND scale) from image transformation to mesh
+const FULLY_TRANSFORMED = false // TODO
+
+const DEBUG = false
 
 let camera, canvas, scene, renderer, mesh, targetMesh
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
@@ -197,6 +216,12 @@ function updateHud() {
   }
 }
 
+function log(message) {
+  if (DEBUG) {
+    console.log(message)
+  }
+}
+
 function setupMobileDebug() {
   // for image tracking we need a mobile debug console as it only works on android
   // This library is very big so only use it while debugging - just comment it out when your app is done
@@ -248,7 +273,7 @@ function traverseObjectVertices(obj, callback) {
 async function setupImageTarget() {
   const img = document.getElementById('img')
   const imgBitmap = await createImageBitmap(img)
-  console.log(imgBitmap)
+  log(imgBitmap)
   return imgBitmap
 }
 
@@ -335,9 +360,11 @@ async function init() {
   loader.load(MESH_MODEL_FILE_NAME_URL, function(gltf) {
     mesh = gltf.scene;
  
-    mixer = new THREE.AnimationMixer(mesh)
-    activeAction = mixer.clipAction(gltf.animations[0])
-    console.log('Active action: ' + activeAction)
+    if (ANIMATED) {
+      mixer = new THREE.AnimationMixer(mesh)
+      activeAction = mixer.clipAction(gltf.animations[0])
+      log('Active action: ' + activeAction)  
+    }
 
     traverseObjectVertices(mesh, (vertex) => { 
       min.x = Math.min(min.x, vertex.x)
@@ -396,11 +423,16 @@ function onWindowResize() {
 }
 
 function play() {
-    if (!activeAction) {
-      console.log('Play: No active action')
+    if (!ANIMATED) {
       return
     }
-    console.log('Play: Active action: ' + activeAction)
+    if (!activeAction) {
+      log('Play: No active action')
+      return
+    }
+    if (DEBUG) {
+      log('Play: Active action: ' + activeAction)
+    }
     
     activeAction.reset()
     activeAction.fadeIn(1)
@@ -410,11 +442,14 @@ function play() {
 }
 
 function stop() {
-  if (!activeAction) {
-    console.log('Stop: No active action')
+  if (!ANIMATED) {
     return
   }
-  console.log('Stop: Active action: ' + activeAction)
+  if (!activeAction) {
+    log('Stop: No active action')
+    return
+  }
+  log('Stop: Active action: ' + activeAction)
 
   activeAction.fadeOut(1)
   activeAction.stop()
@@ -424,16 +459,20 @@ function stop() {
 }
 
 async function updateFromCamera() {
+  if (!camera || !center) {
+    return
+  }
+
   lookAtVector = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(camera.quaternion)
   lookAtVector = lookAtVector.normalize()
   toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
 
   camera.up = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(camera.quaternion)
   
-  console.log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
-  console.log('camera up: (' + camera.up.x + ', ' + camera.up.y + ', ' + camera.up.z + ')')
-  console.log('lookAtVector: (' + lookAtVector.x + ', ' + lookAtVector.y + ', ' + lookAtVector.z + ')')
-  console.log('toCameraPosVector: (' + toCameraPosVector.x + ', ' + toCameraPosVector.y + ', ' + toCameraPosVector.z + ')')
+  log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
+  log('camera up: (' + camera.up.x + ', ' + camera.up.y + ', ' + camera.up.z + ')')
+  log('lookAtVector: (' + lookAtVector.x + ', ' + lookAtVector.y + ', ' + lookAtVector.z + ')')
+  log('toCameraPosVector: (' + toCameraPosVector.x + ', ' + toCameraPosVector.y + ', ' + toCameraPosVector.z + ')')
 }
 
 async function updateMesh() {
@@ -443,31 +482,43 @@ async function updateMesh() {
   //   camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
   //   camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
   // )
-  
   // mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
   // mesh.lookAt(camera.position)
   // mesh.up = camera.up
 }
 
 async function updateMeshByPose(pose) {
+  if (!pose || !mesh) {
+    return
+  }
   let position = new THREE.Vector3(
     pose.transform.position.x + MESH_MODEL_TRANSLATE.x, 
     pose.transform.position.y + MESH_MODEL_TRANSLATE.y, 
     pose.transform.position.z + MESH_MODEL_TRANSLATE.z)
-  let lookAt = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(pose.transform.orientation) 
-  lookAt = lookAt.normalize()
-  let target = new THREE.Vector3(
-    position.x + lookAt.x,
-    position.y + lookAt.y,
-    position.z + lookAt.z
-  )
   mesh.position.set(position.x, position.y, position.z)
-  mesh.lookAt(target)
+  if (!ROTATED) {
+    let lookAt = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(pose.transform.orientation) 
+    lookAt = lookAt.normalize()
+    let target = new THREE.Vector3(
+      position.x + lookAt.x,
+      position.y + lookAt.y,
+      position.z + lookAt.z
+    )  
+    mesh.lookAt(target)
+  }
+  else {
+    // TODO: ticks, clocks, milliseconds, sync, etc
+    mesh.rotateY(ROTATION_DELTA * clock.getDelta())
+  }
   mesh.up = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(pose.transform.orientation) // just for some case
   // mesh.matrix.fromArray(pose.transform.matrix);
 }
 
 async function updateTargetMesh() {
+  if (!camera || !targetMesh) {
+    return
+  }
+
   let newPosition = new THREE.Vector3(
     camera.position.x + TARGET_MESH_DISTANCE * lookAtVector.x,
     camera.position.y + TARGET_MESH_DISTANCE * lookAtVector.y,
@@ -480,19 +531,27 @@ async function updateTargetMesh() {
 }
 
 async function showMesh() {
-  mesh.visible = true
+  if (mesh) {
+    mesh.visible = true
+  }
 }
 
 async function hideMesh() {
-  mesh.visible = false
+  if (mesh) {
+    mesh.visible = false
+  }
 }
 
 async function showTargetMesh() {
-  targetMesh.visible = true
+  if (targetMesh) {
+    targetMesh.visible = true
+  }
 }
 
 async function hideTargetMesh() {
-  targetMesh.visible = false
+  if (targetMesh) {
+    targetMesh.visible = false
+  }
 }
 
 async function update() {
@@ -528,19 +587,19 @@ async function renderFrame(timestamp, frame) {
 
     //checking the state of the tracking
     const state = result.trackingState;
-    console.log(state);
+    log(state);
 
     if (state == "tracked") {
-      console.log("Image target has been found")
+      log("Image target has been found")
       targetMeshVisible = false
-      if (!played) play()
-      if (modelReady) mixer.update(clock.getDelta())
+      if (ANIMATED && (!played)) play()
+      if (ANIMATED && modelReady) mixer.update(clock.getDelta())
       updateMeshByPose(pose)
       showMesh()
     } else if (state == "emulated") {
-      if (played) stop()
+      if (ANIMATED && played) stop()
       hideMesh()
-      console.log("Image target no longer seen")
+      log("Image target no longer seen")
     }
   }
 }
