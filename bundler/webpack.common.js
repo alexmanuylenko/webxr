@@ -1,44 +1,76 @@
-const CopyWebpackPlugin = require('copy-webpack-plugin')
+// Общие настройки сборщика Webpack, применимые ко всем конфигурациям - как к отладочной (dev), так и к релизной (prod)
+
+// Плагин для копирования файлов в сборку (возможно, что сейчас не нужен):
+// const CopyWebpackPlugin = require('copy-webpack-plugin')
+
+// Плагин для генерации HTML-страниц:
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+// Плагин для минификации CSS:
 const MiniCSSExtractPlugin = require('mini-css-extract-plugin')
+
+// Работа с путями:
 const path = require('path')
 
+// Настраиваем экспорт модулей:
 module.exports = {
-    entry: path.resolve(__dirname, '../src/script.js'),
+
+    // Точка входа в приложение (их вообще говоря может/должно быть несколько):
+    entry: path.resolve(__dirname, '../src/script.js'), // Указываем абсолютный путь
+    
+    // На выходе имеем сборку (bundle):
     output:
     {
+        // Имя файла со сборкой:
         filename: 'bundle.[contenthash].js',
+
+        // Абсолютный путь к сборке:
         path: path.resolve(__dirname, '../dist')
     },
+
+    // Инструмент времени разработки "Карта исходников". Не уверен, что нужен нам и здесь.
     devtool: 'source-map',
+
+    // Плагины и конфигурация:
     plugins:
     [
-        new CopyWebpackPlugin({
-            patterns: [
-                { from: path.resolve(__dirname, '../static') }
-            ]
-        }),
+        // Это осталось с предыдущей конфигурации.
+        // Подключаем плагин и копируем ресурсы в папку ../static
+        // Нам это сейчас вряд ли нужно.
+        // new CopyWebpackPlugin({
+        //     patterns: [
+        //         { from: path.resolve(__dirname, '../static') }
+        //     ]
+        // }),
+
+        // Подключаем плагин и создаем правило для страницы приложения.
+        // Здесь указываем главную страницу приложения:
         new HtmlWebpackPlugin({
-            template: path.resolve(__dirname, '../src/index.html'),
-            minify: true
+            template: path.resolve(__dirname, '../src/index.html'), //Указание шаблона HTML-страницы: местоположение страницы (главной), абсолютный путь
+            minify: true // Минифицировать / оптимизировать
         }),
+
+        // Подключаем плагин минификации CSS:
         new MiniCSSExtractPlugin()
     ],
+
+    // Настройки модулей:
     module:
     {
+        // Правила обработки файлов разных типов:
         rules:
         [
             // HTML
             {
-                test: /\.(html)$/,
-                use: ['html-loader']
+                test: /\.(html)$/, // Шаблон поиска файла/маска файла (регулярное выражение)
+                use: ['html-loader'] // Кто обрабатывает, загружает этот тип файлов (загрузчик)
             },
 
             // JS
             {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use:
+                test: /\.js$/, // Шаблон поиска файла/маска файла (регулярное выражение)
+                exclude: /node_modules/, // Исключаем папку node_modules с зависимостями
+                use: // Кто обрабатывает, загружает этот тип файлов (загрузчик)
                 [
                     'babel-loader'
                 ]
@@ -46,39 +78,39 @@ module.exports = {
 
             // CSS
             {
-                test: /\.css$/,
-                use:
+                test: /\.css$/, // Шаблон поиска файла/маска файла (регулярное выражение)
+                use: // Кто обрабатывает, загружает этот тип файлов (загрузчики)
                 [
                     MiniCSSExtractPlugin.loader,
                     'css-loader'
                 ]
             },
 
-            // Images
+            // Изображения
             {
-                test: /\.(jpg|png|gif|svg)$/,
-                use:
+                test: /\.(jpg|png|gif|svg)$/, // Шаблон поиска файла/маска файла (регулярное выражение)
+                use: // Кто обрабатывает, загружает этот тип файлов (загрузчик)
                 [
                     {
                         loader: 'file-loader',
-                        options:
+                        options: // Опции загрузчика
                         {
-                            outputPath: 'assets/images/'
+                            outputPath: 'assets/images/' // Загружать изображения в эту конечную папку в итоговой сборке приложения
                         }
                     }
                 ]
             },
 
-            // Fonts
+            // Шрифты
             {
-                test: /\.(ttf|eot|woff|woff2)$/,
-                use:
+                test: /\.(ttf|eot|woff|woff2)$/, // Шаблон поиска файла/маска файла (регулярное выражение)
+                use: // Кто обрабатывает, загружает этот тип файлов (загрузчик)
                 [
                     {
                         loader: 'file-loader',
-                        options:
+                        options: // Опции загрузчика
                         {
-                            outputPath: 'assets/fonts/'
+                            outputPath: 'assets/fonts/' // Загружать шрифты в эту папку в итоговой сборке приложения
                         }
                     }
                 ]
