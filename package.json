@@ -1,35 +1,55 @@
 {
+  "//": "Это файл с настройками проекта. Мы используем Node.js (сервер для отладки) и Webpack (упаковщик, бандлер, bundler)",
+  "//": "Развертывание (деплой, deploy) проекта сейчас осуществляется на GitHub Pages того репозитория на который настроен проект, с которого он был вытянут (pull).",
+  "//": "Для того, чтобы загрузить все зависимости после того, как проект вытянут из репозитория надо один раз запустить npm install",
+  
+  "//": "Репозиторий. Сюда можно/нужно вписать адрес репозитория, отличный от того откуда этот проект был вытянут (pull) - используется при развертывании (деплое):",
   "repository": "#",
+  
+  "//": "Лицензия - можно вписать теоретически любую:",
   "license": "MIT",
+
+  "//": "Цели и скрипты для сборки и деплоя:",
   "scripts": {
+    "//": "Сборка релизной production-версии с помощью Webpack в каталог ./dist:",
     "build": "webpack --config ./bundler/webpack.prod.js",
+    
+    "//": "Запуск отладочного локального веб-сервера:",
     "dev": "webpack serve --https --config ./bundler/webpack.dev.js",
+    
+    "//": "Сборка релизной production-версии перед развертыванием (деплоем):",
     "predeploy": "npm run build",
+    
+    "//": "Деплой (развертывание) на GitHub Pages:",
     "deploy": "gh-pages -d dist"
   },
+
+  "//": "Зависимости. Библиотеки и их версии, необходимые для работы приложения:",
   "dependencies": {
     "@babel/core": "^7.12.10",
     "@babel/preset-env": "^7.12.11",
     "babel-loader": "^8.2.2",
-    "clean-webpack-plugin": "^3.0.0",
-    "copy-webpack-plugin": "^7.0.0",
-    "css-loader": "^5.0.1",
-    "dat.gui": "^0.7.7",
-    "eruda": "^2.4.1",
-    "file-loader": "^6.2.0",
     "gsap": "^3.5.1",
     "html-loader": "^1.3.2",
-    "html-webpack-plugin": "^5.0.0-alpha.7",
-    "mini-css-extract-plugin": "^1.3.5",
-    "portfinder-sync": "0.0.2",
-    "raw-loader": "^4.0.2",
+    "css-loader": "^5.0.1",
     "style-loader": "^2.0.0",
+    "mini-css-extract-plugin": "^1.3.5",
+    "file-loader": "^6.2.0",
+    "raw-loader": "^4.0.2",
+    "dat.gui": "^0.7.7",
+    "eruda": "^2.4.1",
+    "portfinder-sync": "0.0.2",
     "three": "^0.125.1",
     "webpack": "^5.18.0",
     "webpack-cli": "^4.4.0",
     "webpack-dev-server": "^3.11.2",
-    "webpack-merge": "^5.7.3"
+    "webpack-merge": "^5.7.3",
+    "html-webpack-plugin": "^5.0.0-alpha.7",
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^7.0.0"
   },
+
+  "//": "Зависимости, библиотеки, необходимые во время разработки:",
   "devDependencies": {
     "@types/copy-webpack-plugin": "^10.1.0",
     "@types/mini-css-extract-plugin": "^2.5.1",
