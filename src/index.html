@@ -1,26 +1,77 @@
+<!--
+    Главная страница приложения.
+    На данный момент это Single Page Application (SPA),
+    то есть все действия и обновления происходят на этой, одной странице.
+    TODO: Добавить новые страницы, сделать Multiple Pages Application,
+    либо организовать перестройку и взаимодействие текущей Single-страницы,
+    например, как во фреймворках типа Angular.
+-->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> <!--Язык страницы по-умолчанию - английский-->
 <head>
+    <!--Кодировка UTF-8 - поддержка в том числе и русского языка-->
     <meta charset="UTF-8">
+
+    <!--
+        Параметры вьюпорта - видового экрана, в который выводится трехмерная сцена.
+        Ширина равна ширине устройства, масштаб - один к одному
+    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <title>WebXR AR Image Tracking Demo</title>
+
+    <!--
+        Подключаем скрипт отладочной консоли.
+        Внимание: Это нужно закомментировать в релизной production-версии!
+    -->
     <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+    
+    <!--Подключаем главный скрипт приложения (мы используем webpack)-->
     <script type="module"></script>
     <!-- <script type="module" defer></script> -->
     <!-- <script type="application/javascript" defer></script> -->
 </head>
 <body>
+    <!--Загогловок на странице с информацией о приложении и инструкциями пользователю-->
     <div class="header">
         <h1 class="header-txt">Демо дополненной реальности с трекингом изображения</h1>
         <p class="header-txt">Нажмите на кнопку "START AR" и найдите в окружающей вас среде изображение маркера:</p>
+        
+        <!--
+            Изрбражение маркера для информации пользователю.
+            Внимание: это НЕ то изображение, из которого скрипт будет брять эталон изрбражения для распознавания при трекинге!
+        -->
         <img class="header-img" src="https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg"/>
+        
+        <!--
+            TODO: Вообще, текст с адресом страницы с флагом должен быть ссылкой, однако Хром не даст перейти пользователю по такой ссылке.
+            Альтернатива: поместить рядом кнопку "Скопировать ссылку", однако копирование со страницы сейчас не работает,
+            так как сразу при загрузке страницы начинает работать основной цикл рендеринга 3D-графики и сцены WebGL из основоного скрипта,
+            подгружается кнопка ARButton, канва ("холст", canvas) для вывода графики фактически перекрывает и блокирует основной документ и его поток.
+        -->
         <p class="header-txt"><b>Внимание!</b> Убедитесь что в вашем браузере флаг <b>chrome://flags/#webxr-incubations</b> установлен в <b>Enabled</b></p>
     </div>
+
+    <!--
+        Основная канва, "холст" для вывода 3D-графики.
+        Имеет соответствующий CSS-класс .webgl со всеми указанными там свойствами.
+        В частности позицию fixed, то есть вне потока основного документа,
+        положение в начале экрана и размеры, задаваемые настройкой meta "viewport"
+    -->
     <canvas class="webgl"></canvas>
+
+    <!--
+        Загружаемое изображение маркера в полном размере, невидимое на странице, с доступом к нему из скрипта по id.
+        Отсюда скрипт будет брать эталон изображения маркера для распознавания при трекинге.
+    -->
     <img id='img' src='https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg' alt='fire' style='display: none;'/>
     <!-- <img id='img' src='https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png' alt='leela' style='display: none;'/> -->
     <!-- <img id='img' src='https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/bender.png' alt='bender' style='display: none;'/> -->
+    
+    <!--
+        Блок для отладочной консоли.
+        Внимание! В релизной production-версии это должно быть закомментировано!
+    -->
     <div id='console-ui'></div>
 </body>
 </html>
