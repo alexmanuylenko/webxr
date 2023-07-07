@@ -4,10 +4,41 @@
     padding: 0;
 }
 
-html,
+html 
+{
+    overflow: hidden;
+}
+
 body
 {
     overflow: hidden;
+    font: 1em, Arial, Helvetica, sans-serif;
+    background: #000;
+    color: #fff;
+}
+
+.header 
+{
+    margin: auto;
+    width: 60%;
+}
+
+.header-img 
+{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+.header-txt 
+{
+    text-align: center;
+}
+
+p 
+{
+    font-size: 1em;
 }
 
 .webgl
