@@ -1,6 +1,9 @@
 // Главный скрипт приложения.
 // Вся работа с AR и 3D-графикой здесь.
 
+// Notes: Размеры указаны в метрах, углы - в радианах и градусах, в зависимости от контекста.
+// Система координат по умолчанию - "левая": ось X - слева направо, ось Y - сверху вниз, ось Z - вглубь экрана.
+
 // Подключаем движок THREE.JS
 import * as THREE from 'three'
 
@@ -74,7 +77,7 @@ const HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
 // Параметры обработки (трансформации, преобразования, центрирования) модели после загрузки
 // Mesh model processing (centring) parameters:
 //////////////////////////////////////////////////////////////////////////////////////////
-// Масштабировать модель с этими коэффициентами
+// Масштабировать нормированную (приведенную к единичному параллелепипеду) модель с этими коэффициентами
 const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
 
 // Повернуть модель вокруг соответствующих осей на эти углы
@@ -124,76 +127,197 @@ const FULLY_TRANSFORMED = false
 const DEBUG = false
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Рабочие переменные
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-let camera, canvas, scene, renderer, mesh, targetMesh
+// Камера наблюдателя 3D-сцены
+let camera
+
+// Канва, "холст", на который выводится графика
+let canvas
+
+// Трехмерная сцена
+let scene
+
+// Рендерер, WebGLRenderer
+let renderer
+
+// Собственно выводимая модель.
+// mesh - плохое имя, модель может состоять из нескольких мешей
+let mesh
+
+// Меш полупрозрачной "рамки цели" с изображением маркера
+let targetMesh
+
+// Левая, нижняя, ближняя точка ограничивающего параллелепипеда (AABB - Axis-Aligned Bounding Box) модели
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
+
+// Правая, верхняя, дальняя точка ограничивающего параллелепипеда (AABB - Axis-Aligned Bounding Box) модели
 let max = new THREE.Vector3(Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE)
-let width, height, length, scaleFactor
-let center, diag, diagLength, toCameraPosVector, lookAtVector
 
-let mixer //: THREE.AnimationMixer
+// Ширина модели (размер AABB по оси X)
+let width
+
+// Высота модели (размер AABB по оси Y)
+let height
+
+// Глубина модели (размер AABB по оси Z)
+let length
+
+// Коэффициент масштабирования для приведения к модели,
+// максимальная из сторон AABB которой имеет длину 1.
+let scaleFactor
+
+// Геометрический центр модели
+let center
+
+// Диагональ модели, а точнее ее AABB - вектор от точки min до точки max 
+let diag
+
+// Длина диагонали модели
+let diagLength
+
+// Вектор от геометрического центра модели до позиции наблюдателя камеры
+let toCameraPosVector
+
+// Вектор направления "взгляда" камеры
+let lookAtVector
+
+// Микшер анимации - THREE.AnimationMixer
+let mixer
+
+// Готова ли модель к проигрыванию анимации?
 let modelReady = false
-let played = false
-let activeAction //: THREE.AnimationAction
 
+// Проигрывается ли анимация?
+let played = false
+
+// Текущее активное анимационное действие - THREE.AnimationAction
+let activeAction
+
+// Видна ли полупрозрачная "рамка цели" с изображением маркера?
 let targetMeshVisible = true
 
+// Служебные часы, для анимации и HUD
 const clock = new THREE.Clock()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// HUD - Heads-Up Display - 2D проекционный дисплей для отображения различной информации.
+// Сейчас отображает индикаторы производительности - FPS и время рендеринга одного кадра,
+// в играх может отображать уровень здоровья персонажа или боеприпасов.
+// TODO: Задел на будущее: Нарисовать полупрозрачную рамку цели не в трехмерном пространстве,
+// а на 2D-контексте данного HUD.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-let hudCanvas, hudCtx, hudTexture, hudPlane
-let hudCustom1, hudCustom2, hudCustom3
-let hudTimer = performance || Date
-let hudMsActive = false
-let hudMsStart = hudTimer.now()
-let hudMsEnd = hudTimer.now()
-let hudMsGraphData = new Array(32).fill(0)
-let hudMs = 0
-let hudDisplayRefreshDelay = 100
-let hudFpsLastTime = hudTimer.now()
-let hudFpsFrames = 0
-let hudFpsGraphData = new Array(32).fill(0)
-let hudCamera, hudScene
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Канва, "холст", на который выводится графика HUD
+let hudCanvas
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Графический 2D-контекст для HUD
+let hudCtx
+
+// Изображение текстуры, в которую выводится HUD
+let hudTexture
+
+// Плоскость в пространстве камеры, на которую выводится HUD
+let hudPlane
+
+// Кастомная величина 1, которая может выводиться в HUD
+let hudCustom1
+
+// Кастомная величина 2, которая может выводиться в HUD
+let hudCustom2
+
+// Кастомная величина 3, которая может выводиться в HUD
+let hudCustom3
+
+// Таймер для HUD для измерения прошедшего времени
+let hudTimer = performance || Date
+
+// Измеряем ли время рендеринга кадра в милисекундах?
+let hudMsActive = false
+
+// Начало измерения времени кадра
+let hudMsStart = hudTimer.now()
+
+// Конец измерения времени кадра
+let hudMsEnd = hudTimer.now()
+
+// Данные для графика времени кадра
+let hudMsGraphData = new Array(32).fill(0)
+
+// Количество прошедших милисекунд
+let hudMs = 0
+
+// Задержка обновления дисплея HUD
+let hudDisplayRefreshDelay = 100
+
+// Последнее время когда было измерено FPS
+let hudFpsLastTime = hudTimer.now()
+
+// Количество отрендеренных кадров
+let hudFpsFrames = 0
+
+// Данные для графика FPS
+let hudFpsGraphData = new Array(32).fill(0)
+
+// (Не используется) Камера наблюдателя HUD. Сейчас совпадает с камерой основной сцены.
+let hudCamera
+
+// (Не используется) Сцена для HUD. Предполагалось держать для HUD отдельную сцену, но сейчас HUD рисуется по сути в основной сцене.
+let hudScene
+
+// Создание HUD
+// Передаем сцену и камеру, но на данный момент это не используется.
 function createHud(_scene, _camera) {
+  // Запоминаем сцену и камеру, хотя это не используется
   hudScene = _scene
   hudCamera = _camera;
+  
+  // Если камера не привязана к сцене - привязываем
   if (hudCamera.parent === null) {
     hudScene.add(hudCamera);
   }
 
+  
+  // Создаем на страницк отдельный элемент <canvas>
+  // в который будем выводить HUD-графику
+  // TODO: Попробовать обойтись существующей канвой:
   // hudCanvas = document.querySelector('canvas.webgl')
   hudCanvas = document.createElement("canvas")
   hudCanvas.width = 64
   hudCanvas.height = 64
 
+  // Получаем 2D-контекст новой канвы
   hudCtx = hudCanvas.getContext("2d")
+
+  // Получаем текстуру, куда будем отрисовывать HUD, из 2D-контекста
   hudTexture = new THREE.Texture(hudCanvas)
   
+  // Создаем материал на основе текстуры из 2D-контекста
   const hudMaterial = new THREE.MeshBasicMaterial({
     map: hudTexture,
     depthTest: false,
     transparent: true,
   })
   
+  // Конструируем плоскость, на которой будем выводить HUD,
+  // натягиваем на нее текстуру из 2D-контекста,
+  // задаем положение в пространстве.
   const hudGeometry = new THREE.PlaneGeometry(1, 1, 1, 1)
-
   hudPlane = new THREE.Mesh(hudGeometry, hudMaterial)
   hudPlane.position.x = DEFAULT_HUD_POSITION.x
   hudPlane.position.y = DEFAULT_HUD_POSITION.y
   hudPlane.position.z = DEFAULT_HUD_POSITION.z
   hudPlane.renderOrder = 9999
 
-  hudCamera.add(hudPlane)
-  camera.add(hudPlane)
+  // Добавляем нашу плоскость с текстурой в пространство камеры
+  hudCamera.add(hudPlane) // Это - не нужно, по крайней мере сейчас
+  camera.add(hudPlane) // А это - правильно, по крайней мере сейчас
 }
 
+// Вкл/Выкл HUD
 function setHudEnabled(enabled) {
   hudPlane.visible = enabled
 }
+
 
 function setHudX(val) {
   hudPlane.position.x = val
