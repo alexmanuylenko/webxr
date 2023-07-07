@@ -470,58 +470,107 @@ function updateHud() {
 
 // Основной код приложения
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Отладочное логирование
 function log(message) {
+  // Если фоаг DEBUG выставлен записать сообщение в консоль
   if (DEBUG) {
     console.log(message)
   }
 }
 
+// Настройка отладочного логирования
+// Внимание: В релизной версии эта функция должна быть закомментирована
+// for image tracking we need a mobile debug console as it only works on android
+// This library is very big so only use it while debugging - just comment it out when your app is done
 function setupMobileDebug() {
-  // for image tracking we need a mobile debug console as it only works on android
-  // This library is very big so only use it while debugging - just comment it out when your app is done
+  // Получить элемент <div> с id="console-ui" страницы для вывода консоли
   const containerEl = document.getElementById("console-ui");
+  
+  // Инициализировать библиотеку отладочной консоли
   eruda.init({
-    container: containerEl
+    container: containerEl // Назначить контейнерный элемент для консоли
   });
+
+  // Инициализировать инструменты разработки и отладки консоли
+  // Запрос селектора, который добавим позже, при инициализации из Shadow DOM
   const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
-  devToolEl.style.height = '40%'; // control the height of the dev tool panel
+  
+  // Высота отладочной консоли = 40% экрана
+  // control the height of the dev tool panel
+  devToolEl.style.height = '40%';
 }
 
+// Обход верщин объекта obj и применение к ним функции callback
+// obj может быть составным объектом
+// Данная функция не меняет сами вершины, далее она используется, в частности, для
+// расчета ограничивающего параллелепипеда (AABB - Axis-Aligned Bounding Box) модели
 function traverseObjectVertices(obj, callback) {
+  //Массив объектов для обработки
   const front = new Array;
-  if (Array.isArray(obj)) {
+  
+  if (Array.isArray(obj)) { // Если объект составной
+    // Добавляем каждую часть составного объекта в массив для обработки
     for (let i = 0; i < obj.length; i++) {
       front.push(obj[i]);
     }
-  } else {
+  } else { // Если объект не составной
+    // Добавляем сам объект в массив для обработки
     front.push(obj);
   }
+
+  // Обходим, просматриваем массив и обрабатываем каждый объект
   while (front.length > 0) {
+    
+    // Берем ("снимаем с вкрхушки") очередной объект
     // pop have better performance than shif, and we can go from back in this case
     const obj = front.pop();
-    if (obj) {
-      if (obj instanceof THREE.Mesh && obj.geometry !== undefined) {
-        const vertices = obj.geometry.vertices;
-        const vertex = new THREE.Vector3();
-        if (vertices === undefined && obj.geometry.attributes !== undefined && "position" in obj.geometry.attributes) {
-          const pos = obj.geometry.attributes.position;
-          for (let i = 0; i < pos.count * pos.itemSize; i += pos.itemSize) {
-            vertex.set(pos.array[i], pos.array[i + 1], pos.array[i + 2]);
-            callback(vertex.applyMatrix4(obj.matrixWorld));
-          }
-        } else {
-          for (let i = 0; i < vertices.length; ++i) {
-            callback(vertex.copy(vertices[i]).applyMatrix4(obj.matrixWorld));
-          }
+    
+    if (!obj) { // Если объект не определен (null, undefined, etc...)
+      // Пропускаем объект
+      continue
+    }
+    
+    // Если объект является экземпляром класса THREE.Mesh и при этом у него определено поле геометрии geometry:
+    if (obj instanceof THREE.Mesh && obj.geometry !== undefined) {
+      // Берем массив вершин геометрии объекта
+      const vertices = obj.geometry.vertices;
+      
+      // Текущая верщина
+      const vertex = new THREE.Vector3();
+
+      if (vertices !== undefined) { // Если массив вершин определен
+        for (let i = 0; i < vertices.length; ++i) { // Цикл по всему массиву вершин
+          // Применяем к КОПИИ текущей вершины массива мировое преобразование объекта
+          // и передаем результат в вызываемую callback-функцию для обработки
+          callback(vertex.copy(vertices[i]).applyMatrix4(obj.matrixWorld));
         }
       }
-      if (obj.children !== undefined) {
-        for (const child of obj.children) {
-          front.push(child);
+
+      // Если массив вершин неопределен, но при этом определены аттрибуты геометрии объекта и в аттрибутах есть координаты позиций вершин position
+      if (vertices === undefined && obj.geometry.attributes !== undefined && "position" in obj.geometry.attributes) {
+        // Берем массив аттрибутов координат вершин (позиций) их геометрии объекта  
+        const pos = obj.geometry.attributes.position;
+        
+        // Цикл по массиву аттрибутов с шагом равным размеру одного элемента этого массива, перебираем элементы
+        for (let i = 0; i < pos.count * pos.itemSize; i += pos.itemSize) {
+          // Достаем координаты вершины из элементов, копируем в текущую вершину
+          vertex.set(pos.array[i], pos.array[i + 1], pos.array[i + 2]);
+          
+          // Применяем к копии вершины мировое преобразование объекта
+          // и передаем результат в вызываемую callback-функцию для обработки
+          callback(vertex.applyMatrix4(obj.matrixWorld));
         }
       }
     }
-  }
+
+    if (obj.children !== undefined) { // Если у объекта есть "дети"
+      // Добавляем всех "детей" в массив для обработки
+      for (const child of obj.children) {
+        front.push(child);
+      }
+    }
+  } // Повторяем, пока массив front объектов для обработки не станет пустым
 }
 
 async function setupImageTarget() {
