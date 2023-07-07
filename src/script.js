@@ -1,45 +1,130 @@
+// Главный скрипт приложения.
+// Вся работа с AR и 3D-графикой здесь.
+
+// Подключаем движок THREE.JS
 import * as THREE from 'three'
+
+// Подключаем кнопку дополненной реальности ARButton из THREE.JS
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
+
+// Подключаем загрузчик 3D-моделей в формате GLTF/GLB из THREE.JS
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+// Подключаем стили нашей страницы.
+// Поскольку используем Webpack, то делаем это здесь.
+// Хотя я не уверен, что этому здесь самое место.
 // Not sure if we really need this:
 import './style.css'
 
+// Настройки приложения, сцены, трехмерной модели, центрирования, вида, поведения, в том числе и модели.
+// TODO: Эти настройки должны быть/будут для каждой модели свои, разные, при этом хранить их нужно
+// в отдельных конфигурационных файлах для каждой страницы и модели в формате JSON или JavaScript-объекта Config,
+// например: fire.config.json/fire.config.js, leela.config.json/leela.config.js, bender.config.json/bender.config.js и так далее.
+// Поскольку сейчас у нас Single Page Application надо продумать систему динамической подгрузки этих конфигов,
+// либо переделать все на Multiple Pages Application, где тоже своя специфика (возможно придется отказаться от Webpack?)
 // TODO: Move to settings config file, unique for each page/model or JSON:
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// URL файла откуда загружать модель
 const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/bender.glb"
+
+// URL файла с изображением маркера, который надо будет отслеживать и который будет изображен на полупрозрачной "рамке цели",
+// когда изображение маркера еще не найдено в окружающей среде
 const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
 // const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png'
 // const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/bender.png'
+
+// Notes: Из-за всяческих CORS-особенностей файлы модели и маркера должны, в идеале, быть расположены на другом сервере, домене и так далее.
+// С чтением моделей и изображений локально возникли проблемы, они же возникли, если файлы-ассеты расположены на том же сервере и домене.
+
+// Цвет неба сцены
 const SKY_COLOR = 0xffffff 
+
+// Цвет земли в сцене
 const GROUND_COLOR = 0xbbbbff
+
+// Интенсивность источника света в сцене
 const LIGHT_INTENSITY = 1
+
+// Позиция источника света в сцене
 const LIGHT_POSITION = new THREE.Vector3(0.5, 1, 0.25)
+
+// Параметр центрирования модели: расстояние, на которое переместить модель вдоль вертикальной оси при обработке
 const HEIGHT_DISTANCE = 1.0
+
+// Во сколько раз удалить модель от камеры на расстояние равное диагонали модели
+// Диагональ модели - расстояние от минимальной до максимальной точки
+// ограничивающего параллелепипеда (AABB - Axis-Aligned Bounding Box) модели.
 const DIAGONAL_FRONT_DISTANCE = 1.5
+
+// Расстояние полупрозрачной "рамки цели" от точки зрения
 const TARGET_MESH_DISTANCE = 3.0
+
+// Положение проекционных дисплеев (HUD - Heads-Up Display, см. далее) 
+// в пространстве относительно камеры 
+// по-умолчанию (если не задан следующий параметр HUD_POSITION)
 const DEFAULT_HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
+
+// Текущее положение проекционных дисплеев (HUD - Heads-Up Display, см. далее) 
+// в пространстве относительно камеры.
+// Может совпадать, а может и не совпадать с DEFAULT_HUD_POSITION 
 const HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
 
+// Параметры обработки (трансформации, преобразования, центрирования) модели после загрузки
 // Mesh model processing (centring) parameters:
+//////////////////////////////////////////////////////////////////////////////////////////
+// Масштабировать модель с этими коэффициентами
 const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
-const MESH_MODEL_ROTATE = new THREE.Vector3(0.0, 0.0, 0.0)
-const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0)
 
+// Повернуть модель вокруг соответствующих осей на эти углы
+const MESH_MODEL_ROTATE = new THREE.Vector3(0.0, 0.0, 0.0)
+
+// Перенести модель вдоль соответствующих осей на эти расстояния (в метрах)
+const MESH_MODEL_TRANSLATE = new THREE.Vector3(0.0, -0.2, 0.0)
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// Анимируется ли модель?
 const ANIMATED = true
 
-const ROTATED = false // TODO
-const ROTATION_DELTA = Math.PI / 12.0 //TODO
+// В разработке:
+// Вращать ли модель вокруг вертикальной оси (для презентации)?
+// TODO
+const ROTATED = false
 
+// В разработке:
+// Если модель вращаем вокруг вертикальной оси, то
+// на какой угол повернуть модель за 1 интервал между вызовами
+// функции обновления?
+//TODO
+const ROTATION_DELTA = Math.PI / 12.0
+
+// Задел на будущее:
+// По умолчанию, когда маркер найден мы помещаем модель в центр изображения и ориентируем по плоскости изрбражения.
+// Если выставлен данный флаг, то это означает иное поведение:
+// мы копируем данные RigidTransform, то есть position и orientation маркера в модель,
+// но при этом не трогаем масщтаб модели.
+// В нашем пользовательском случае мы сканируем маркер (граффити) со стены.
+// Данный режим может быть полезен при сканировании маркера, нарисованного на земле,
+// при этом модель будет выглядеть как бы "стоящая" на маркере.
 // If this is set to true copy position and orientation, but NOT scale to mesh from image transformation
-const RIGID_TRANSFORMED = false //TODO
+// TODO
+const RIGID_TRANSFORMED = false
 
+// Задел на будущее:
+// Если данный флаг выставлен, то мы полностью копируем матрицу преобразования matrix изображения маркера в модель.
+// При этом меняются не только позиция position, ориентация orientation, но, возможно и масштаб scale модели.
 // If this is set to true simply copy transform matrix ( + position + orientation AND scale) from image transformation to mesh
-const FULLY_TRANSFORMED = false // TODO
+// TODO
+const FULLY_TRANSFORMED = false
 
+// Флаг отладочного режима.
+// Если активен, то много чего пишется в консоль.
+// В релизе должен быть false-
 const DEBUG = false
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 let camera, canvas, scene, renderer, mesh, targetMesh
 let min = new THREE.Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE)
 let max = new THREE.Vector3(Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE)
@@ -53,6 +138,10 @@ let activeAction //: THREE.AnimationAction
 
 let targetMeshVisible = true
 
+const clock = new THREE.Clock()
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 let hudCanvas, hudCtx, hudTexture, hudPlane
 let hudCustom1, hudCustom2, hudCustom3
 let hudTimer = performance || Date
@@ -65,11 +154,10 @@ let hudDisplayRefreshDelay = 100
 let hudFpsLastTime = hudTimer.now()
 let hudFpsFrames = 0
 let hudFpsGraphData = new Array(32).fill(0)
-
 let hudCamera, hudScene
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const clock = new THREE.Clock()
-
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function createHud(_scene, _camera) {
   hudScene = _scene
   hudCamera = _camera;
@@ -215,7 +303,10 @@ function updateHud() {
     }
   }
 }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Основной код приложения
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function log(message) {
   if (DEBUG) {
     console.log(message)
@@ -477,14 +568,17 @@ async function updateFromCamera() {
 
 async function updateMesh() {
   // TODO
-  // let newPosition = new THREE.Vector3(
-  //   camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
-  //   camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
-  //   camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
-  // )
-  // mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
-  // mesh.lookAt(camera.position)
-  // mesh.up = camera.up
+}
+
+async function updateMeshToScreenCenter() {
+  let newPosition = new THREE.Vector3(
+    camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
+    camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
+    camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
+  )
+  mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  mesh.lookAt(camera.position)
+  mesh.up = camera.up
 }
 
 async function updateMeshByPose(pose) {
@@ -620,3 +714,4 @@ function main() {
 setupMobileDebug()
 init()
 main()
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
