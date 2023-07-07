@@ -206,6 +206,7 @@ const clock = new THREE.Clock()
 // в играх может отображать уровень здоровья персонажа или боеприпасов.
 // TODO: Задел на будущее: Нарисовать полупрозрачную рамку цели не в трехмерном пространстве,
 // а на 2D-контексте данного HUD.
+// Функционал подсчета FPS и времени кадра на данный момент из релизной версии может быть исключен.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Канва, "холст", на который выводится графика HUD
 let hudCanvas
@@ -228,7 +229,8 @@ let hudCustom2
 // Кастомная величина 3, которая может выводиться в HUD
 let hudCustom3
 
-// Таймер для HUD для измерения прошедшего времени
+// Переменная-таймер для HUD для измерения прошедшего времени
+// Содержит Дату/Время либо объект Performance (Node.js)
 let hudTimer = performance || Date
 
 // Измеряем ли время рендеринга кадра в милисекундах?
@@ -318,112 +320,149 @@ function setHudEnabled(enabled) {
   hudPlane.visible = enabled
 }
 
-
+// Установить положение (плоскости) HUD по X
 function setHudX(val) {
   hudPlane.position.x = val
 }
 
+// Установить положение (плоскости) HUD по Y
 function setHudY(val) {
   hudPlane.position.y = val
 }
 
+// Установить положение (плоскости) HUD по Z
 function setHudZ(val) {
   hudPlane.position.z = val
 }
 
+// Установить кастомную наблюдаемую величину 1
 function setHudCustom1(val) {
   hudCustom1 = val
 }
 
+// Установить кастомную наблюдаемую величину 2
 function setHudCustom2(val) {
   hudCustom2 = val
 }
 
+// Установить кастомную наблюдаемую величину 3
 function setHudCustom3(val) {
   hudCustom3 = val
 }
 
+// Начать отсчет милисекунд времени рендеринга одного кадра: запустить таймер HUD
 function startHudTimer() {
-  hudMsActive = true
-  hudMsStart = hudTimer.now()
+  hudMsActive = true // Запуск, начало отсчета
+  hudMsStart = hudTimer.now() // Начало отсчета = Текущее время/дата
 }
 
+// Закончить отсчет милисекунд времени рендеринга одного кадра
 function endHudTimer() {
-  hudMsEnd = hudTimer.now()
-  hudMs = ((hudMsEnd - hudMsStart) * 100) / 100
+  hudMsEnd = hudTimer.now() //Конец отсчета = Текущее время/дата
+  hudMs = ((hudMsEnd - hudMsStart) * 100) / 100 // Сколько прошло милисекунд за время отсчета
 }
 
+// Добавить объект к HUD
+// Добавляет объект в пространство камеры
 function addToHud(object3d) {
-  hudCamera.add(object3d)
-  camera.add(object3d)
+  hudCamera.add(object3d) // Это не нужно
+  camera.add(object3d) // Это правильно
 }
 
+// Обновление HUD
 function updateHud() {
+  // Текстуру, куда отрисовываем HUD надо обновить
   hudTexture.needsUpdate = true;
 
+  // Берем текущее время/дату
   const now = hudTimer.now();
+
+  // Сколько прошло с тех пор как измеряли FPS в последний раз:
   const dt = now - hudFpsLastTime;
+  
+  // Увеличиваем счетчик кадров
   hudFpsFrames++;
+
+  // Если прошло времени больше, чем заданная задержка, то:
   if (now > hudFpsLastTime + hudDisplayRefreshDelay) {
+    // Очищаем контекст - будем перерисовывать HUD заново
     hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
 
-    //FPS
+    //Считаем FPS в зависимости от того, сколько прошло кадров
     hudFpsLastTime = now;
     var FPS = ((((hudFpsFrames * 1000) / dt) * 100) / 100).toFixed(2);
+
+    // Обнуляем счетчик кадров
     hudFpsFrames = 0;
 
+    // Запоминаем текущее значение FPS в массиве для графика:
     hudFpsGraphData.push(FPS);
+
+    // Если в массиве большк 32 элементов - сдвигаем массив
     if (hudFpsGraphData.length >= 32) {
       hudFpsGraphData.shift();
     }
+
+    // Находим максимальный элемент в массиве
     var ratio = Math.max.apply(null, hudFpsGraphData);
 
-    hudCtx.strokeStyle = "#035363";
-    for (var i = 0; i < 32; i++) {
-      hudCtx.beginPath();
-      hudCtx.moveTo(i, 16);
-      hudCtx.lineTo(i, 16 - (hudFpsGraphData[i] / ratio) * 16);
-      hudCtx.stroke();
+    // Рисуем график FPS
+    hudCtx.strokeStyle = "#035363"; // Стиль линии
+    for (var i = 0; i < 32; i++) { // Рисуем 32 вертикальных линии
+      hudCtx.beginPath(); // Начинаем рисовать линию
+      hudCtx.moveTo(i, 16); // Начало линии
+      hudCtx.lineTo(i, 16 - (hudFpsGraphData[i] / ratio) * 16); // Конец линии. Высота линии - нормированная, в зависимости от значения в массиве и максимального значения
+      hudCtx.stroke(); // Рисуем линию, применяем стиль
     }
 
-    hudCtx.font = "13px Calibri";
-    hudCtx.fillStyle = "#00cc00";
-    hudCtx.fillText(FPS, 1, 13);
+    // Выводим числовое значение FPS
+    hudCtx.font = "13px Calibri"; // Шрифт цифр
+    hudCtx.fillStyle = "#00cc00"; // Стиль заливки
+    hudCtx.fillText(FPS, 1, 13); // Выводим текст со значением FPS
 
-    //MS
-    if (hudMsActive) {
+    //Выводим значение MS - милисекунд, время рендеринга одного кадра
+    if (hudMsActive) { // Если идет отсчет (измерение) времени рендеринга кадра, то:
+      // Добавить в массив текущее значение времени
       hudMsGraphData.push(hudMs);
+
+      // Если значений в массиве больше 32 - сдвигаем массив
       if (hudMsGraphData.length >= 32) {
         hudMsGraphData.shift();
       }
+
+      // Находим максимальный элемент в массиве
       ratio = Math.max.apply(null, hudMsGraphData);
-      hudCtx.strokeStyle = "#f35363";
-      for (var i = 0; i < 32; i++) {
-        hudCtx.beginPath();
-        hudCtx.moveTo(i + 32, 16);
-        hudCtx.lineTo(i + 32, 16 - (hudMsGraphData[i] / ratio) * 16);
-        hudCtx.stroke();
+      
+      // Рисуем график MS милисекунд времени кадра
+      hudCtx.strokeStyle = "#f35363";  // Стиль линии
+      for (var i = 0; i < 32; i++) { // Рисуем 32 вертикальных линии
+        hudCtx.beginPath(); // Начинаем рисовать линию
+        hudCtx.moveTo(i + 32, 16); // Начало линии
+        hudCtx.lineTo(i + 32, 16 - (hudMsGraphData[i] / ratio) * 16); // Конец линии. Высота линии - нормированная, в зависимости от значения в массиве и максимального значения
+        hudCtx.stroke();  // Рисуем линию, применяем стиль
       }
-      hudCtx.font = "13px Calibri";
-      hudCtx.fillStyle = "#00ccff";
-      hudCtx.fillText(hudMs.toFixed(2), 33, 13);
+
+      // Выводим числовое значение MS времени кадра
+      hudCtx.font = "13px Calibri";  // Шрифт цифр
+      hudCtx.fillStyle = "#00ccff";  // Стиль заливки
+      hudCtx.fillText(hudMs.toFixed(2), 33, 13); // Выводим текст со значением текущего времени кадра
     }
 
-    //Custom
-    if (hudCustom1) {
-      hudCtx.font = "11px";
-      hudCtx.fillStyle = "#ffffff";
-      hudCtx.fillText(hudCustom1, 0, 29);
+    //Вывод Custom-ных метрик, наблюдаемых значений
+    if (hudCustom1) { // Если величина определена
+      hudCtx.font = "11px"; // Шрифт цифр
+      hudCtx.fillStyle = "#ffffff";  // Стиль заливки
+      hudCtx.fillText(hudCustom1, 0, 29); // Выводим значение кастомной величины 1
     }
-    if (hudCustom2) {
-      hudCtx.font = "11px";
-      hudCtx.fillStyle = "#ffffff";
-      hudCtx.fillText(hudCustom2, 0, 45);
+    if (hudCustom2) { // Если величина определена
+      hudCtx.font = "11px"; // Шрифт цифр
+      hudCtx.fillStyle = "#ffffff"; // Стиль заливки
+      hudCtx.fillText(hudCustom2, 0, 45); // Выводим значение кастомной величины 2
     }
-    if (hudCustom3) {
-      hudCtx.font = "11px";
+    if (hudCustom3) { // Если величина определена
+      hudCtx.font = "11px"; // Шрифт цифр
       hudCtx.fillStyle = "#ffffff";
-      hudCtx.fillText(hudCustom3, 0, 61);
+      hudCtx.fillText(hudCustom3, 0, 61); // Выводим значение кастомной величины 3
     }
   }
 }
