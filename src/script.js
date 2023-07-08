@@ -698,7 +698,7 @@ async function init() {
 
   // Берем и запоминаем заголовок
   // TODO (это на будущее)
-  header = document.getElementById('header')
+  // header = document.getElementById('header')
 
   // Берем канву, "холст" для вывода графики из элемента <canvas> с id='canvas.webgl'
   canvas = document.querySelector('canvas.webgl')
@@ -1141,7 +1141,7 @@ async function renderFrame(timestamp, frame) {
 
   // Если кадра нет - показываем заголовок
   // TODO (это на будущее)
-  header.visible = true
+  // header.visible = true
 
   // Кадр должен быть определен
   if (!frame) { 
@@ -1150,7 +1150,7 @@ async function renderFrame(timestamp, frame) {
 
   // Прячем заголовок:
   // TODO (это на будущее)
-  header.visible = false
+  // header.visible = false
 
   // Получаем референсное пространство - систему координат из дополненной реальности
   // Это начало координат в реальном мире в тот момент, когда режим AR был включен.
