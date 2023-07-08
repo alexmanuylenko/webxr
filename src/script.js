@@ -1008,7 +1008,7 @@ async function updateMeshToScreenCenter() {
 
 // Обновить модель на основе позы - преобразования пространства изображения (pose)
 async function updateMeshByPose(pose) {
-  
+
   // Поза и модель должны быть определены
   if (!pose || !mesh) {
     return
@@ -1059,110 +1059,193 @@ async function updateMeshByPose(pose) {
   // Это будет использоваться далее в ходе дальнейшей разработки для ориентации и преобразования "стоящих" моделей на "горизонтальных" маркерах.
 }
 
+// Обновление полупрозрачной "рамки цели" с изображением маркера,
+// используемая при поиске изображения маркера в окружающей среде
 async function updateTargetMesh() {
+
+  // Камера и "рамка цели" должны быть определены
   if (!camera || !targetMesh) {
     return
   }
 
+  // Помещаем рамку цели от точки зрения камеры вдоль направления "взгляда" камеры
+  // на TARGET_MESH_DISTANCE единиц (метров)
   let newPosition = new THREE.Vector3(
     camera.position.x + TARGET_MESH_DISTANCE * lookAtVector.x,
     camera.position.y + TARGET_MESH_DISTANCE * lookAtVector.y,
     camera.position.z + TARGET_MESH_DISTANCE * lookAtVector.z,
   )
 
+  // Обновление позиции "рамки цели"
   targetMesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  
+  // Ориентируем "рамку цели" так, чтобы она всегда "смотрела" на камеру
   targetMesh.lookAt(camera.position)
+
+  // Сонаправляем вертикальные векторы "рамки" цели и камеры,
+  // чтобы при крене камеры, "рамка" цели также кренилась
+  // в нужном нам направлении
   targetMesh.up = camera.up
 }
 
+// Если модель определена - показать ее
 async function showMesh() {
   if (mesh) {
     mesh.visible = true
   }
 }
 
+// Если модель определена - спрятать ее
 async function hideMesh() {
   if (mesh) {
     mesh.visible = false
   }
 }
 
+// Если рамка цели определена - показать ее
 async function showTargetMesh() {
   if (targetMesh) {
     targetMesh.visible = true
   }
 }
 
+// Если рамка цели определена - спрятать ее
 async function hideTargetMesh() {
   if (targetMesh) {
     targetMesh.visible = false
   }
 }
 
+// Функция обновления, вызываемая при каждом проходе
 async function update() {
+  // Обновить параметры на основе текущей камеры
   updateFromCamera()
+  
+  // Обновить модель
   updateMesh()
+  
+  // Обновить "рамку цели"
   updateTargetMesh()
 }
 
+// Основная функция рендеринга кадра frame c меткой времени timestamp (не используется)
 async function renderFrame(timestamp, frame) {
+  
+  // Кадр должен быть определен
   if (!frame) { 
     return 
   }
 
+  // Получаем референсное пространство - систему координат из дополненной реальности
+  // Это начало координат в реальном мире в тот момент, когда режим AR был включен.
   const referenceSpace = renderer.xr.getReferenceSpace();
 
+  // Показываем и, при необходимости, сразу прячем рамку цели
   showTargetMesh()
   if (!targetMeshVisible) {
     hideTargetMesh()
   }
 
+  // Предполагаем, что маркер не найден и рамку цели в этом проходе надо будет включить
   targetMeshVisible = true
 
+  // Получаем результаты трекинга изображений
   //checking if there are any images we track
   const results = frame.getImageTrackingResults()
   
+  // Обходим результаты трекинга изображений (их может быть несколько если мы "трекаем" и "натрекали" несколько изображений)
   //if we have more than one image the results are an array 
   for (const result of results) {
+
+    // Получаем индекс изображения в массиве trackedImages (см. инициализацию и создание ARButton)
     // The result's index is the image's position in the trackedImages array specified at session creation
     const imageIndex = result.index;
 
+    // Получаем позу изображения - систему координат, преобразование изображения (RigidTransform - трансформация твердого тела)
+    // result.ImageSpace - пространство изображения
+    // referenceSpace - наше референсное пространство, в котором мы находимся
     // Get the pose of the image relative to a reference space.
     const pose = frame.getPose(result.imageSpace, referenceSpace);
 
+    // Проверяем состояние трекинга изображение
     //checking the state of the tracking
     const state = result.trackingState;
     log(state);
 
-    if (state == "tracked") {
+    if (state == "tracked") { // Изображение найдено
+
+      // Отладочный вывод
       log("Image target has been found")
+      
+      // Убрать рамку цели на следующем проходе
       targetMeshVisible = false
+      
+      // Если модель анимируется, но анимация не проигрывается - запустить анимацию
       if (ANIMATED && (!played)) play()
+
+      // Если модель анимируется и готова - обновить дельты времени микшера анимации
       if (ANIMATED && modelReady) mixer.update(clock.getDelta())
+
+      // Обновить положение модели по позе изображения
       updateMeshByPose(pose)
+      
+      // Показать модель
       showMesh()
-    } else if (state == "emulated") {
+    } else if (state == "emulated") { // Изображение либо не найдено либо потеряно из поля зрения
+      
+      // Если модель анимируется и анимация проигрывается - остановить анимацию
       if (ANIMATED && played) stop()
+      
+      // Спрятать модель
       hideMesh()
+
+      // Отладочный вывод
       log("Image target no longer seen")
     }
   }
 }
 
+// Функция одного прохода главного цикла рендеринга и анимации
+// timestamp - метка времени
+// frame - объект кадра  
 async function mainLoop(timestamp, frame) {
+  // Один проход:
+
+  // Запуск таймера HUD, начало измерений (см. выше)
   startHudTimer()
+
+  // Обновить объекты приложения и сцены
   update()
+
+  // Обновить HUD
   updateHud()
+
+  // Отрисовать кадр
   renderFrame(timestamp, frame)
+  
+  // Отрисовка сцены по камере
   renderer.render(scene, camera)
+
+  // Конец измерений, остановка таймера HUD (на самом деле остановки нет, точнее так не совсем корректно говорить - см. выше реализацию)
   endHudTimer()
 }
 
+// Главная функция приложения
 function main() {
+  // Установить функцию, вызываемую на каждой итерации (проходе) главного цикла рендеринга и анимации
   renderer.setAnimationLoop(mainLoop)
 }
 
+// Настроить мобильную отладку
+// Внимание! Это должно быть закомментировано в релизе!
 setupMobileDebug()
+
+// Инициализация приложения
 init()
+
+// Запуск приложения и главного цикла рендеринга и анимации
 main()
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: Разобраться с асинхронными функциями, по крайней мере часть из них могут быть и неасинхронными.
+// TODO: Возможно функции HUD должны быть закомментированы в релизе.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
