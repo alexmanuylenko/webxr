@@ -28,6 +28,7 @@ import './style.css'
 // либо переделать все на Multiple Pages Application, где тоже своя специфика (возможно придется отказаться от Webpack?)
 // TODO: Move to settings config file, unique for each page/model or JSON:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // URL файла откуда загружать модель
 const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
@@ -78,6 +79,7 @@ const HUD_POSITION = new THREE.Vector3(0.0, 1.5, -5.0)
 // Параметры обработки (трансформации, преобразования, центрирования) модели после загрузки
 // Mesh model processing (centring) parameters:
 //////////////////////////////////////////////////////////////////////////////////////////
+
 // Масштабировать нормированную (приведенную к единичному параллелепипеду) модель с этими коэффициентами
 const MESH_MODEL_SCALE = new THREE.Vector3(0.5, 0.5, 0.5)
 
@@ -209,6 +211,7 @@ const clock = new THREE.Clock()
 // а на 2D-контексте данного HUD.
 // Функционал подсчета FPS и времени кадра на данный момент из релизной версии может быть исключен.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Канва, "холст", на который выводится графика HUD
 let hudCanvas
 
@@ -270,6 +273,7 @@ let hudScene
 // Создание HUD
 // Передаем сцену и камеру, но на данный момент это не используется.
 function createHud(_scene, _camera) {
+  
   // Запоминаем сцену и камеру, хотя это не используется
   hudScene = _scene
   hudCamera = _camera;
@@ -279,7 +283,6 @@ function createHud(_scene, _camera) {
     hudScene.add(hudCamera);
   }
 
-  
   // Создаем на страницк отдельный элемент <canvas>
   // в который будем выводить HUD-графику
   // TODO: Попробовать обойтись существующей канвой:
@@ -372,6 +375,7 @@ function addToHud(object3d) {
 
 // Обновление HUD
 function updateHud() {
+
   // Текстуру, куда отрисовываем HUD надо обновить
   hudTexture.needsUpdate = true;
 
@@ -386,6 +390,7 @@ function updateHud() {
 
   // Если прошло времени больше, чем заданная задержка, то:
   if (now > hudFpsLastTime + hudDisplayRefreshDelay) {
+
     // Очищаем контекст - будем перерисовывать HUD заново
     hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
 
@@ -423,6 +428,7 @@ function updateHud() {
 
     //Выводим значение MS - милисекунд, время рендеринга одного кадра
     if (hudMsActive) { // Если идет отсчет (измерение) времени рендеринга кадра, то:
+
       // Добавить в массив текущее значение времени
       hudMsGraphData.push(hudMs);
 
@@ -485,6 +491,7 @@ function log(message) {
 // for image tracking we need a mobile debug console as it only works on android
 // This library is very big so only use it while debugging - just comment it out when your app is done
 function setupMobileDebug() {
+
   // Получить элемент <div> с id="console-ui" страницы для вывода консоли
   const containerEl = document.getElementById("console-ui");
   
@@ -507,6 +514,7 @@ function setupMobileDebug() {
 // Данная функция не меняет сами вершины, далее она используется, в частности, для
 // расчета ограничивающего параллелепипеда (AABB - Axis-Aligned Bounding Box) модели
 function traverseObjectVertices(obj, callback) {
+
   //Массив объектов для обработки
   const front = new Array;
   
@@ -534,6 +542,7 @@ function traverseObjectVertices(obj, callback) {
     
     // Если объект является экземпляром класса THREE.Mesh и при этом у него определено поле геометрии geometry:
     if (obj instanceof THREE.Mesh && obj.geometry !== undefined) {
+
       // Берем массив вершин геометрии объекта
       const vertices = obj.geometry.vertices;
       
@@ -550,6 +559,7 @@ function traverseObjectVertices(obj, callback) {
 
       // Если массив вершин неопределен, но при этом определены аттрибуты геометрии объекта и в аттрибутах есть координаты позиций вершин position
       if (vertices === undefined && obj.geometry.attributes !== undefined && "position" in obj.geometry.attributes) {
+
         // Берем массив аттрибутов координат вершин (позиций) их геометрии объекта  
         const pos = obj.geometry.attributes.position;
         
@@ -576,6 +586,7 @@ function traverseObjectVertices(obj, callback) {
 
 // Настройка изображения-цели (маркера)
 async function setupImageTarget() {
+
   // Берем изображение из тега <img> с id='img'
   const img = document.getElementById('img')
   
@@ -680,6 +691,7 @@ function createARButton(imgBitmap) {
 
 // Функция инициализации приложения
 async function init() {
+
   // Берем канву, "холст" для вывода графики из элемента <canvas> с id='canvas.webgl'
   canvas = document.querySelector('canvas.webgl')
 
@@ -884,33 +896,35 @@ function onWindowResize() {
 
 // Запуск проигрывания анимации
 function play() {
-    // Модель должна быть анимируемой
-    if (!ANIMATED) {
-      return
-    }
 
-    // Должно быть определено анимационное действие
-    if (!activeAction) {
-      log('Play: No active action')
-      return
-    }
-    log('Play: Active action: ' + activeAction)
+  // Модель должна быть анимируемой
+  if (!ANIMATED) {
+    return
+  }
+
+  // Должно быть определено анимационное действие
+  if (!activeAction) {
+    log('Play: No active action')
+    return
+  }
+  log('Play: Active action: ' + activeAction)
     
-    // Сброс анимации
-    activeAction.reset()
+  // Сброс анимации
+  activeAction.reset()
 
-    // "Наплыв" за 1 секунду
-    activeAction.fadeIn(1)
+  // "Наплыв" за 1 секунду
+  activeAction.fadeIn(1)
     
-    // Запуск анимации
-    activeAction.play()
+  // Запуск анимации
+  activeAction.play()
 
-    // Анимация проигрывается
-    played = true
+  // Анимация проигрывается
+  played = true
 }
 
 // Остановка проигрывания анимации
 function stop() {
+
   // Модель должна быть анимируемой
   if (!ANIMATED) {
     return
@@ -938,6 +952,7 @@ function stop() {
 
 // Обновить параметры на основе камеры
 async function updateFromCamera() {
+
   // Должна быть определена камера и геометрический центр модели
   if (!camera || !center) {
     return
@@ -993,6 +1008,7 @@ async function updateMeshToScreenCenter() {
 
 // Обновить модель на основе позы - преобразования пространства изображения (pose)
 async function updateMeshByPose(pose) {
+  
   // Поза и модель должны быть определены
   if (!pose || !mesh) {
     return
