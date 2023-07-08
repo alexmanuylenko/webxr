@@ -48,3 +48,9 @@ git clone https://github.com/alexmanuylenko/webxr.git
 
 В файле package.json значение "repository": "#" можно, а возможно и нужно заменить на ссылку на ваш собственный репозиторий, возможно тоже репозиторий на GitHub,
 ссылка должна иметь такой же вид как указанная выше ссылка для "вытягивания" репозитория.
+
+Из-за проблем с CORS-делами и соответственно проблемами с загрузкой ресурсы приложения (assets), а именно модели и изображения маркеров хранятся в отдельном репозитории на отдельных GitHub Pages:
+
+https://github.com/alexmanuylenko/webxr-assets
+
+https://alexmanuylenko.github.io/webxr-assets/
