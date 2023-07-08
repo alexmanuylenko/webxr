@@ -500,9 +500,9 @@ function log(message) {
 }
 
 // Настройка мобильной отладки, в частности консоли
-// Внимание: В релизной версии эта функция должна быть закомментирована
-// for image tracking we need a mobile debug console as it only works on android
-// This library is very big so only use it while debugging - just comment it out when your app is done
+// Внимание: В релизной версии эта функция должна быть закомментирована!
+// For image tracking we need a mobile debug console as it only works on android.
+// This library is very big so only use it while debugging - just comment it out when your app is done.
 function setupMobileDebug() {
 
   // Получить элемент <div> с id="console-ui" страницы для вывода консоли
@@ -514,7 +514,7 @@ function setupMobileDebug() {
   });
 
   // Инициализировать инструменты разработки и отладки консоли
-  // Запрос селектора, который добавим позже, при инициализации из Shadow DOM
+  // Запрос селектора из Shadow DOM
   const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
   
   // Высота отладочной консоли = 40% экрана
@@ -544,8 +544,8 @@ function traverseObjectVertices(obj, callback) {
   // Обходим, просматриваем массив и обрабатываем каждый объект
   while (front.length > 0) {
     
-    // Берем ("снимаем с вкрхушки") очередной объект
-    // pop have better performance than shif, and we can go from back in this case
+    // Берем ("снимаем с верхушки стопки") очередной объект
+    // pop have better performance than shift, and we can go from back in this case
     const obj = front.pop();
     
     if (!obj) { // Если объект не определен (null, undefined, etc...)
@@ -553,7 +553,7 @@ function traverseObjectVertices(obj, callback) {
       continue
     }
     
-    // Если объект является экземпляром класса THREE.Mesh и при этом у него определено поле геометрии geometry:
+    // Если объект является экземпляром класса THREE.Mesh (3D сетка, меш) и при этом у него определено поле геометрии geometry:
     if (obj instanceof THREE.Mesh && obj.geometry !== undefined) {
 
       // Берем массив вершин геометрии объекта
@@ -579,6 +579,7 @@ function traverseObjectVertices(obj, callback) {
         // Цикл по массиву аттрибутов с шагом равным размеру одного элемента этого массива, перебираем элементы
         for (let i = 0; i < pos.count * pos.itemSize; i += pos.itemSize) {
           // Достаем координаты вершины из элементов, копируем в текущую вершину
+          // Координаты лежат друг за другом, по "тройкам"
           vertex.set(pos.array[i], pos.array[i + 1], pos.array[i + 2]);
           
           // Применяем к копии вершины мировое преобразование объекта
@@ -661,7 +662,7 @@ function createTargetMesh(texture) {
   // Устанавлиываем массив текстурных координат - по 2 текстурные координаты на каждую вершину
   geometry.setAttribute( 'uv', new THREE.BufferAttribute( uv, 2 ) );
   
-  // Создаем и возвращаем меш (3D-сетку, модель) нашей рамки
+  // Создаем и возвращаем меш (3D-сетку, меш, модель) нашей рамки
   // из геометрии и полупрозрачного материала
   return new THREE.Mesh(geometry, material)
 }
@@ -673,7 +674,9 @@ function createTargetMesh(texture) {
 function createARButton(imgBitmap) {
   const button = ARButton.createButton( // Создаем кнопку
     renderer, // Рендерер
-    { // Объект описания запрашиваемого функционала
+    
+    // Объект описания запрашиваемого функционала:
+    {
       // Запрашиваем функционал трекинга изображений:
       requiredFeatures: ["image-tracking"], // notice a new required feature
       
@@ -689,8 +692,8 @@ function createARButton(imgBitmap) {
         }
       ],
 
-      // this is for the mobile debug
       // Это для мобильной отладки. В релизе нужно закомментировать! 
+      // this is for the mobile debug
       optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
       
       // Это для мобильной отладки. В релизе нужно закомментировать!
