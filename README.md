@@ -28,7 +28,8 @@ npm run deploy
 
 Забрать исходный код проекта можно:
 
-- Вытянув репозиторий по ссылке https://github.com/alexmanuylenko/webxr.git соответственно командой:
+- Вытянув репозиторий по ссылке https://github.com/alexmanuylenko/webxr.git соответственно командой: 
+
 git clone https://github.com/alexmanuylenko/webxr.git
 
 - Нажав на зеленую кнопку "Code" -> "Download ZIP"
