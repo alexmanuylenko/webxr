@@ -311,12 +311,20 @@ function createHud(_scene, _camera) {
   
   // Конструируем плоскость, на которой будем выводить HUD,
   // натягиваем на нее текстуру из 2D-контекста,
-  // задаем положение в пространстве.
+  // задаем положение в пространстве:
+  
+  // Геометрия плоскости
   const hudGeometry = new THREE.PlaneGeometry(1, 1, 1, 1)
+  
+  // Сетка (меш) плоскости
   hudPlane = new THREE.Mesh(hudGeometry, hudMaterial)
+  
+  // Задаем позицию плоскости в пространстве (из настроек):
   hudPlane.position.x = DEFAULT_HUD_POSITION.x
   hudPlane.position.y = DEFAULT_HUD_POSITION.y
   hudPlane.position.z = DEFAULT_HUD_POSITION.z
+
+  // HUD отрисовывается в самую последнюю очередь:
   hudPlane.renderOrder = 9999
 
   // Добавляем нашу плоскость с текстурой в пространство камеры
