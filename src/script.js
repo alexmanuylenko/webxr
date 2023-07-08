@@ -304,9 +304,9 @@ function createHud(_scene, _camera) {
   
   // Создаем материал на основе текстуры из 2D-контекста
   const hudMaterial = new THREE.MeshBasicMaterial({
-    map: hudTexture,
-    depthTest: false,
-    transparent: true,
+    map: hudTexture, // Наша текстура из 2D-контекста
+    depthTest: false, // Отключаем тест глубины (z-буфер) для поаерхности
+    transparent: true, // Прозрачный материал
   })
   
   // Конструируем плоскость, на которой будем выводить HUD,
