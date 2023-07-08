@@ -573,62 +573,111 @@ function traverseObjectVertices(obj, callback) {
   } // Повторяем, пока массив front объектов для обработки не станет пустым
 }
 
+// Настройка изображения-цели (маркера)
 async function setupImageTarget() {
+  // Берем изображение из тега <img> с id='img'
   const img = document.getElementById('img')
+  
+  // Создаем битовую карту изображения
   const imgBitmap = await createImageBitmap(img)
+  
+  // Отладочное логирование
   log(imgBitmap)
+  
+  // Возвращаем битовую карту изображения
   return imgBitmap
 }
 
+// Создание полупрозрачной "рамки цели" с изображением маркера
+// на основе данной текстуры texture для отображения ее при поиске изображения маркера
+// в окружающей среде
 function createTargetMesh(texture) {
+  
+  // Создаем материал для рамки
   var material = new THREE.MeshBasicMaterial( {
-    'map': texture,
-    transparent: true,
-    opacity: 0.5,
-    side: THREE.DoubleSide
+    'map': texture, // Текстура - наша texture
+    transparent: true, // Рамка будет (полу-)прозрачной
+    opacity: 0.5, // Степень прозрачности - 50%
+    side: THREE.DoubleSide // Объект будет "двусторонний" (сейчас это не важно, используется для освещения)
   })
+
+  // Создаем геометрию рамки
   const geometry = new THREE.BufferGeometry();
+  
+  // Координаты вершин рамки
   const vertices = new Float32Array( [
     -1.0, -1.0,  0.0, // v0
      1.0, -1.0,  0.0, // v1
      1.0,  1.0,  0.0, // v2
     -1.0,  1.0,  0.0, // v3
   ] )
+
+  // Индексы для соединения вершин рамки
   const indices = [
     0, 1, 2,
     2, 3, 0,
   ]
+
+  // Текстурные координаты вершин рамки
+  // Привязаны к углам изображения
   const uv = new Float32Array([
     0.0, 0.0,
     1.0, 0.0,
     1.0, 1.0,
     0.0, 1.0,
   ])
+
+  // Устанавливаем массив индексов
   geometry.setIndex( indices );
+  
+  // Устанавливаем массив вершин - по 3 координаты на каждую вершину
   geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+  
+  // Устанавлиываем массив текстурных координат - по 2 текстурные координаты на каждую вершину
   geometry.setAttribute( 'uv', new THREE.BufferAttribute( uv, 2 ) );
+  
+  // Создаем и возвращаем меш (3D-сетку, модель) нашей рамки
+  // из геометрии и полупрозрачного материала
   return new THREE.Mesh(geometry, material)
 }
 
+// Создание компонента кнопки дополненной реальности ARButton
+// В качестве изображения для трекинга передаем битовую карту imgBitmap
+// Больше о функции трекинга изображений здесь:
+// More on image-tracking feature: https://github.com/immersive-web/marker-tracking/blob/main/explainer.md
 function createARButton(imgBitmap) {
-  //more on image-tracking feature: https://github.com/immersive-web/marker-tracking/blob/main/explainer.md
-  const button = ARButton.createButton(renderer, {
-    requiredFeatures: ["image-tracking"], // notice a new required feature
-    trackedImages: [
-      {
-        image: imgBitmap, // tell webxr this is the image target we want to track
-        widthInMeters: 0.7 // in meters what the size of the PRINTED image in the real world
-      }
-    ],
-    //this is for the mobile debug
-    optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
-    domOverlay: {
-      root: document.body
+  const button = ARButton.createButton( // Создаем кнопку
+    renderer, // Рендерер
+    { // Объект описания запрашиваемого функционала
+      // Запрашиваем функционал трекинга изображений:
+      requiredFeatures: ["image-tracking"], // notice a new required feature
+      
+      // Массив отслеживаемых изображений
+      trackedImages: [
+        // Сейчас здесь только одно изображение:
+        {
+          // Данные изображения - наша битовая карта
+          image: imgBitmap, // tell webxr this is the image target we want to track
+          
+          // Ширина изображения в реальном мире в метрах
+          widthInMeters: 0.7 // in meters what the size of the PRINTED image in the real world
+        }
+      ],
+
+      // this is for the mobile debug
+      // Это для мобильной отладки. В релизе нужно закомментировать! 
+      optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
+      
+      // Это для мобильной отладки. В релизе нужно закомментировать!
+      domOverlay: { root: document.body }
     }
-  });
+  );
+
+  // Возвращаем нашу кнопку
   return button
 }
 
+// Функция инициализации приложения
 async function init() {
   canvas = document.querySelector('canvas.webgl')
 
