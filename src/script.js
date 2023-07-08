@@ -2,6 +2,7 @@
 // Вся работа с AR и 3D-графикой здесь.
 
 // Notes: Размеры указаны в метрах, углы - в радианах и градусах, в зависимости от контекста.
+// Неизвестно соответствуют ли виртуальные THREE.JS метры реальным, видимым из камеры в режиме AR.
 // Система координат по умолчанию - "левая": ось X - слева направо, ось Y - сверху вниз, ось Z - вглубь экрана.
 
 // Подключаем движок THREE.JS
@@ -798,7 +799,7 @@ async function init() {
     // над необходимо произвести масштабирование модели с обратным коэффициентом
     let rScaleFactor = 1.0 / scaleFactor
     
-    // Преобразуем модель:
+    // Преобразуем, обрабатываем модель:
     // Важно: Все эти преобразования происходят в непреобразованном пространстве модели при ее загрузке.
     // Система координат данного пространства совпадает с мировой системой координат.
 
@@ -881,99 +882,165 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Запуск проигрывания анимации
 function play() {
+    // Модель должна быть анимируемой
     if (!ANIMATED) {
       return
     }
+
+    // Должно быть определено анимационное действие
     if (!activeAction) {
       log('Play: No active action')
       return
     }
-    if (DEBUG) {
-      log('Play: Active action: ' + activeAction)
-    }
+    log('Play: Active action: ' + activeAction)
     
+    // Сброс анимации
     activeAction.reset()
+
+    // "Наплыв" за 1 секунду
     activeAction.fadeIn(1)
+    
+    // Запуск анимации
     activeAction.play()
 
+    // Анимация проигрывается
     played = true
 }
 
+// Остановка проигрывания анимации
 function stop() {
+  // Модель должна быть анимируемой
   if (!ANIMATED) {
     return
   }
+
+  // Должно быть определено анимационное действие
   if (!activeAction) {
     log('Stop: No active action')
     return
   }
   log('Stop: Active action: ' + activeAction)
 
+  // "Затухание" за 1 секунду
   activeAction.fadeOut(1)
+
+  // Остановка анимации
   activeAction.stop()
+
+  // Сброс анимации
   activeAction.reset()
 
+  // Анимация не проигрывается
   played = false
 }
 
+// Обновить параметры на основе камеры
 async function updateFromCamera() {
+  // Должна быть определена камера и геометрический центр модели
   if (!camera || !center) {
     return
   }
 
+  // Считаем вектор направления "взгляда" камеры
   lookAtVector = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(camera.quaternion)
+
+  // Нормируем вектор направления "взгляда" камеры - делаем его единичной длины
   lookAtVector = lookAtVector.normalize()
+
+  // Считаем вектор от неометрического центра модели к точке зрения камыры
   toCameraPosVector = new THREE.Vector3(camera.position.x - center.x, camera.position.y - center.y, camera.position.z - center.z)
 
+  // Считаем вертикальный вектор камеры
   camera.up = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(camera.quaternion)
   
+  // Вывести всякую отладочную информацию расчетов выше
   log('camera pos: (' + camera.position.x + ', ' + camera.position.y + ', ' + camera.position.z + ')')
   log('camera up: (' + camera.up.x + ', ' + camera.up.y + ', ' + camera.up.z + ')')
   log('lookAtVector: (' + lookAtVector.x + ', ' + lookAtVector.y + ', ' + lookAtVector.z + ')')
   log('toCameraPosVector: (' + toCameraPosVector.x + ', ' + toCameraPosVector.y + ', ' + toCameraPosVector.z + ')')
 }
 
+// Функция обновления модели
 async function updateMesh() {
-  // TODO
+  // TODO (на будущее): В эту функцию можно записать преобразование и обновление параметров модели при очередном проходе
+  // Например, можно вызвать следующую функцию updateMeshToScreenCenter(), центрирующую модель по экрану и сохраняющей ее в таком состоянии для каждого прохода рендеринга.
 }
 
+// Центрирует и масштабирует модель по экрану
+// Модель всегда находится в центре экрана и занимает 3/4 площади экрана
 async function updateMeshToScreenCenter() {
+  
+  // Перенести модель от позиции камеры вдоль вертикального вектора камеры вниз на HEIGHT_DISTANCE * height единиц (метров) - таким образом камера смотрит в центр модели
+  // Затем отодвинуть модель от камеры вдоль вектора направления "зрения" камеры на DIAGONAL_FRONT_DISTANCE * diagLength единиц (метров)
   let newPosition = new THREE.Vector3(
     camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
     camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
     camera.position.z - HEIGHT_DISTANCE * height * camera.up.z + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.z,
   )
+
+  // Обновление позиции модели
   mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+  
+  // Ориентировать модель так, чтобы она всегда "смотрела" на камеру
   mesh.lookAt(camera.position)
+  
+  // Сонаправить вертикальные векторы камеры и модели
+  // Чтобы при крене камеры модель также кренилась в нужную сторону
   mesh.up = camera.up
 }
 
+// Обновить модель на основе позы - преобразования пространства изображения (pose)
 async function updateMeshByPose(pose) {
+  // Поза и модель должны быть определены
   if (!pose || !mesh) {
     return
   }
+
+  // Копируем позицию из позы, добавляем наше смещение из настроен.
+  // Таким образом мы переносим модель в центр изображения с поправкой на наши смещения.
   let position = new THREE.Vector3(
     pose.transform.position.x + MESH_MODEL_TRANSLATE.x, 
     pose.transform.position.y + MESH_MODEL_TRANSLATE.y, 
     pose.transform.position.z + MESH_MODEL_TRANSLATE.z)
+  
+  // Обновляем позицию модели
   mesh.position.set(position.x, position.y, position.z)
-  if (!ROTATED) {
+  
+  // Ориентируем модель
+  if (!ROTATED) { // Если мы НЕ вращаем модель
+    // Ориентируем модель по плоскости изображения
+    // Считаем вектор направления "взгляда" модели, сонаправленным с осью системы координат изображения
+    // Делаем это на основе ориентации системы координат изображения
     let lookAt = new THREE.Vector3(0.0, 1.0, 0.0).applyQuaternion(pose.transform.orientation) 
+    
+    // Нормируем вектор направления "взгляда" модели
     lookAt = lookAt.normalize()
+    
+    // Считаем точку, на которую "смотрит" модель
     let target = new THREE.Vector3(
       position.x + lookAt.x,
       position.y + lookAt.y,
       position.z + lookAt.z
-    )  
+    )
+
+    // Ориентируем модель по оси системы координат изрбражения, так чтобы модель "смотрела" на только что расчитанную точку
     mesh.lookAt(target)
   }
   else {
-    // TODO: ticks, clocks, milliseconds, sync, etc
+    // Если мы вращаем модель, то мы просто применяем вращение вокруг мироваой вертикальной оси
+    // При этом модель уже смещена в центр изображения.
+    // TODO (функционал в разработке): Позаботиться о скороти вращения, синхронизации, таймерах, в соответствии с производительностью, ticks, clocks, milliseconds, sync, etc
     mesh.rotateY(ROTATION_DELTA * clock.getDelta())
   }
+
+  // На всякий случай: преобразрвываем вертикальный вектор модели, чтобы точно ориентировать модель по плоскости изобрвжения
   mesh.up = new THREE.Vector3(0.0, 0.0, -1.0).applyQuaternion(pose.transform.orientation) // just for some case
+  
+  // Notes: В оригинале все сводилось к замене матрицы преобразования модели матрицей преобразования пространства изображения:
   // mesh.matrix.fromArray(pose.transform.matrix);
+  // Это будет использоваться далее в ходе дальнейшей разработки для ориентации и преобразования "стоящих" моделей на "горизонтальных" маркерах.
 }
 
 async function updateTargetMesh() {
