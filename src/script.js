@@ -679,45 +679,94 @@ function createARButton(imgBitmap) {
 
 // Функция инициализации приложения
 async function init() {
+  // Берем канву, "холст" для вывода графики из элемента <canvas> с id='canvas.webgl'
   canvas = document.querySelector('canvas.webgl')
 
+  // Создаем нашу главную трехмерную сцену
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(70, 
-    window.innerWidth / window.innerHeight,
-    0.01,
-    40
+  // Создаем главную камеру
+  camera = new THREE.PerspectiveCamera( // Камера перспективной проекции
+    70, // Угол обзора (FOV - Field-Of-View), в градусах 
+    window.innerWidth / window.innerHeight, // соотношение ширины и высоты экрана
+    0.01, // Расстояние от точки зрения до ближней плоскости отсечения
+    40 // Расстояние от точки зрения до дальней плоскости отсечения
   );
+
+  // Включить автообновления матрицы преобразования (но не проекции!) камеры
+  // Матрицы преобразования (но не проекции!) автоматически пересчитаются при изменении параметров камеры.
   camera.matrixAutoUpdate = true;
+  
+  // Добавляем камеру в сцену, если она (камера) еще не привязана к ней (сцене)
   if (camera.parent === null) {
     scene.add(camera);
   }
 
-  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  // Создаем рендерер
+  renderer = new THREE.WebGLRenderer(
+    { // Объект настройки рендерера
+      canvas: canvas, // Канва, "холст", куда рендерить
+      antialias: true, // Сглаживание
+      alpha: true // Поддержка альфа-канала, например для эффектов (полу-)прозрачности
+    });
+
+  // Устанавливаем соотношение для пикселей - минимум из соотношения устройства и 2
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  
+  // Устанавливаем размер окна вывода - весь документ, его ширина и высота
   renderer.setSize(window.innerWidth, window.innerHeight)
+  
+  // Включаем режим смешанной реальности (XR - miXed Reality)
   renderer.xr.enabled = true
 
+  // Создаем источник "дневного света" - "полусферический" источник с заданными параметрами:
   const light = new THREE.HemisphereLight(SKY_COLOR, GROUND_COLOR, LIGHT_INTENSITY)
+
+  // Устанавливаем позицию источника света в сцене:
   light.position.set(LIGHT_POSITION.x, LIGHT_POSITION.y, LIGHT_POSITION.z)
+
+  // Добавляем источник света в сцену:
   scene.add(light)
 
+  // Создаем HUD - Heads-Up Display, описание - см. выше
   createHud(scene, camera)
+
+  // Устанавливаем позицию дисплеев HUD в сцене
   setHudX(HUD_POSITION.x)
   setHudY(HUD_POSITION.y)
   setHudZ(HUD_POSITION.z)
 
+  // Создаем загрузчик моделей
   const loader = new GLTFLoader()
 
-  loader.load(MESH_MODEL_FILE_NAME_URL, function(gltf) {
+  // Загружаем модель
+  // Внимание! Это асинхронный вызов! Поток выполнения не будет ждать пока он закончится.
+  // Поэтому практически вся дальнейшая инициализация завернута в него и его обработчики
+  // чтобы соблюсти корректную последовательность действий!
+  loader.load(
+    MESH_MODEL_FILE_NAME_URL, //URL с которого загружать модель 
+    function(gltf) { // Обработчик загруженных данных
+    // gltf - данные загруженной модели, а точнее сцены, которая может состоять из нескольких моделей и сеток (мешей)
+    
+    // Достаем сцену из загруженных данный - это и есть наша модель
     mesh = gltf.scene;
  
+    // Если модель анимируется - настраиваем анимацию
     if (ANIMATED) {
+      // Создаем микшер на основе модели
       mixer = new THREE.AnimationMixer(mesh)
+
+      // Достаес первую и, на данный момент, единственную, анимацию:
       activeAction = mixer.clipAction(gltf.animations[0])
+
+      // Дебажное логирование
       log('Active action: ' + activeAction)  
     }
 
+    // Далее идет обработка загруженной модели и вычисление параметрров:
+
+    // Обходим все вершины модели, считаем ограничивающий параллелепипед
+    // (AABB - Axis-Aligned Bounding Box) модели
     traverseObjectVertices(mesh, (vertex) => { 
       min.x = Math.min(min.x, vertex.x)
       min.y = Math.min(min.y, vertex.y)
@@ -728,49 +777,107 @@ async function init() {
       max.z = Math.max(max.z, vertex.z)
     })
 
+    // Считаем геометрический центр модели
     center = new THREE.Vector3((min.x + max.x) / 2.0, (min.y + max.y) / 2.0, (min.z + max.z) / 2.0)
+    
+    // Считаем диагональ модели
     diag = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
+    
+    // Считаем длину диагонали модели
     diagLength = diag.length()
 
+    // Считаем габариты модели
     width = Math.abs(max.x - min.x)
     height = Math.abs(max.y - min.y)
     length = Math.abs(max.z - min.z)
+
+    // Масштабным коэффициентом выбипаем наибольшее из измерений
     scaleFactor = Math.max(width, Math.max(height, length))
+    
+    // Чтобы привести модель к вписанной в параллелепипед, максимальная сторона которого равна 1,
+    // над необходимо произвести масштабирование модели с обратным коэффициентом
     let rScaleFactor = 1.0 / scaleFactor
     
+    // Преобразуем модель:
+    // Важно: Все эти преобразования происходят в непреобразованном пространстве модели при ее загрузке.
+    // Система координат данного пространства совпадает с мировой системой координат.
+
+    // 1) Вписываем в параллелепипед (нормируем) с максимальной стороной 1 и уже "нормированную", "единичную" модель масштабируем как в настройках
     mesh.scale.set(MESH_MODEL_SCALE.x * rScaleFactor, MESH_MODEL_SCALE.y * rScaleFactor, MESH_MODEL_SCALE.z * rScaleFactor)
+    
+    // 2) Поворачиваем модель
     mesh.rotateX(MESH_MODEL_ROTATE.x)
     mesh.rotateY(MESH_MODEL_ROTATE.y)
     mesh.rotateZ(MESH_MODEL_ROTATE.z)
+    
+    // 3) Переносим модель (например, центрируем относительно начала координат)
     mesh.translateX(MESH_MODEL_TRANSLATE.x)
     mesh.translateY(MESH_MODEL_TRANSLATE.y)
     mesh.translateZ(MESH_MODEL_TRANSLATE.z)
 
-    //mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position when we track an image
+    // Включаем автообновление матриц для модели
+    // Важно: Мы должны будем выключить его в случае, если собираемся вручную выставлять матрицу преобразования для модели,
+    // например заменив ее матрицей преобразования пространства изображения.
+    // Important: we have to set this to false because we'll update the position when we track an image
+    mesh.matrixAutoUpdate = true;
+    
+    // Прячем модель до тех пор пока не найдем изображение маркера
     mesh.visible = false;
+    
+    // Добавляем модель в сцену
     scene.add(mesh);
+    
+    // Модель готова к анимации (если вообще анимируется)
     modelReady = true
 
+    // Создаем загрузчик текстуры изображения маркера
     var textureLoader = new THREE.TextureLoader()
-    textureLoader.load(TEXTURE_MARKER_IMAGE_FILE_NAME_URL, async function(texture) {
+
+    // Загружаем текстуру изображения маркера
+    // Важно: Это тоже асинхронный вызов, поток выполнения ждать не будет,
+    // поэтому вся дальнейшая инициализация помещена в обработчик.
+    textureLoader.load(
+      TEXTURE_MARKER_IMAGE_FILE_NAME_URL, //URL, откуда загружать текстуру 
+      async function(texture) { // Обработчик загруженных данных
   
+      // Создаем полупрозрачную "рамку цели" с нашей тектурой
       targetMesh = createTargetMesh(texture)
+
+      // Прячем ее "до поры до времени"
       targetMesh.visible = false
+
+      // Добавляем полупрозрачную "рамку цели" в сцену
       scene.add(targetMesh);
     
+      // Создаем целевое изображение для трекинга (см. выше),
+      // возвращает битовую катру маркера
       var imgBitmap = await setupImageTarget()
+
+      // Создаем компонент кнопки дополненной реальности,
+      // передаем ей нашу битовую карту для трекинга
       const button = createARButton(imgBitmap)
+      
+      // Вставляем кнопку дополненной реальности в документ
       document.body.appendChild(button);
     })  
   });
 
+  // Добавляем слушателя события изменения размеров окна
   window.addEventListener("resize", onWindowResize, false);
 }
 
+// Функция вызываемая при наступлении события изменениия размеров окна
 function onWindowResize() {
+  // Перерасчет соотношения ширины и высоты экрана
   camera.aspect = window.innerWidth / window.innerHeight;
+  
+  // Обновление матрицы проекции камеры
   camera.updateProjectionMatrix();
+
+  // Устанавливаем соотношениие пикселей экрана - минимум из соотношения устройства и 2
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  
+  // Устанавливаем новый размер вывода экрана для рендерера
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
