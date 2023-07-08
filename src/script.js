@@ -481,7 +481,7 @@ function updateHud() {
     }
     if (hudCustom3) { // Если величина определена
       hudCtx.font = "11px"; // Шрифт цифр
-      hudCtx.fillStyle = "#ffffff";
+      hudCtx.fillStyle = "#ffffff"; // Стиль заливки
       hudCtx.fillText(hudCustom3, 0, 61); // Выводим значение кастомной величины 3
     }
   }
