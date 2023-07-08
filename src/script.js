@@ -499,7 +499,7 @@ function log(message) {
   }
 }
 
-// Настройка отладочного логирования
+// Настройка мобильной отладки, в частности консоли
 // Внимание: В релизной версии эта функция должна быть закомментирована
 // for image tracking we need a mobile debug console as it only works on android
 // This library is very big so only use it while debugging - just comment it out when your app is done
