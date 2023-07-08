@@ -200,6 +200,10 @@ let activeAction
 // Видна ли полупрозрачная "рамка цели" с изображением маркера?
 let targetMeshVisible = true
 
+// Блок с информацией для пользрвателей
+// TODO (это на будущее)
+let header
+
 // Служебные часы, для анимации и HUD
 const clock = new THREE.Clock()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -692,6 +696,10 @@ function createARButton(imgBitmap) {
 // Функция инициализации приложения
 async function init() {
 
+  // Берем и запоминаем заголовок
+  // TODO (это на будущее)
+  header = document.getElementById('header')
+
   // Берем канву, "холст" для вывода графики из элемента <canvas> с id='canvas.webgl'
   canvas = document.querySelector('canvas.webgl')
 
@@ -1130,11 +1138,19 @@ async function update() {
 
 // Основная функция рендеринга кадра frame c меткой времени timestamp (не используется)
 async function renderFrame(timestamp, frame) {
-  
+
+  // Если кадра нет - показываем заголовок
+  // TODO (это на будущее)
+  header.visible = true
+
   // Кадр должен быть определен
   if (!frame) { 
     return 
   }
+
+  // Прячем заголовок:
+  // TODO (это на будущее)
+  header.visible = false
 
   // Получаем референсное пространство - систему координат из дополненной реальности
   // Это начало координат в реальном мире в тот момент, когда режим AR был включен.
