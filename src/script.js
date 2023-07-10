@@ -1010,7 +1010,7 @@ async function updateFromCamera() {
 
 // Функция обновления модели
 async function updateMesh() {
-  // TODO (на будущее): В эту функцию можно записать преобразование и обновление параметров модели при очередном проходе
+  // TODO (на будущее): В эту функцию можно записать преобразование и обновление параметров модели при очередном проходе.
   // Например, можно вызвать следующую функцию updateMeshToScreenCenter(), центрирующую модель по экрану и сохраняющей ее в таком состоянии для каждого прохода рендеринга.
 }
 
@@ -1018,8 +1018,8 @@ async function updateMesh() {
 // Модель всегда находится в центре экрана и занимает 3/4 площади экрана
 async function updateMeshToScreenCenter() {
   
-  // Перенести модель от позиции камеры вдоль вертикального вектора камеры вниз на HEIGHT_DISTANCE * height единиц (метров) - таким образом камера смотрит в центр модели
-  // Затем отодвинуть модель от камеры вдоль вектора направления "зрения" камеры на DIAGONAL_FRONT_DISTANCE * diagLength единиц (метров)
+  // Перенести модель от позиции камеры вдоль вертикального вектора камеры вниз на HEIGHT_DISTANCE * height единиц (метров) - таким образом камера смотрит в центр модели.
+  // Затем отодвинуть модель от камеры вдоль вектора направления "зрения" камеры на DIAGONAL_FRONT_DISTANCE * diagLength единиц (метров).
   let newPosition = new THREE.Vector3(
     camera.position.x - HEIGHT_DISTANCE * height * camera.up.x + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.x,
     camera.position.y - HEIGHT_DISTANCE * height * camera.up.y + DIAGONAL_FRONT_DISTANCE * diagLength * lookAtVector.y,
@@ -1045,7 +1045,7 @@ async function updateMeshByPose(pose) {
     return
   }
 
-  // Копируем позицию из позы, добавляем наше смещение из настроен.
+  // Копируем позицию из позы, добавляем наше смещение из настроек.
   // Таким образом мы переносим модель в центр изображения с поправкой на наши смещения.
   let position = new THREE.Vector3(
     pose.transform.position.x + MESH_MODEL_TRANSLATE.x, 
@@ -1149,6 +1149,7 @@ async function hideTargetMesh() {
 
 // Функция обновления, вызываемая при каждом проходе
 async function update() {
+
   // Обновить параметры на основе текущей камеры
   updateFromCamera()
   
@@ -1189,11 +1190,11 @@ async function renderFrame(timestamp, frame) {
   targetMeshVisible = true
 
   // Получаем результаты трекинга изображений
-  //checking if there are any images we track
+  // Checking if there are any images we track
   const results = frame.getImageTrackingResults()
   
   // Обходим результаты трекинга изображений (их может быть несколько если мы "трекаем" и "натрекали" несколько изображений)
-  //if we have more than one image the results are an array 
+  // If we have more than one image the results are an array 
   for (const result of results) {
 
     // Получаем индекс изображения в массиве trackedImages (см. инициализацию и создание ARButton)
@@ -1207,8 +1208,10 @@ async function renderFrame(timestamp, frame) {
     const pose = frame.getPose(result.imageSpace, referenceSpace);
 
     // Проверяем состояние трекинга изображение
-    //checking the state of the tracking
+    // Checking the state of the tracking
     const state = result.trackingState;
+    
+    // Отладочный вывод
     log(state);
 
     if (state == "tracked") { // Изображение найдено
@@ -1244,7 +1247,7 @@ async function renderFrame(timestamp, frame) {
   }
 }
 
-// Функция одного прохода главного цикла рендеринга и анимации
+// Функция одной итерации (прохода) главного цикла рендеринга и анимации
 // timestamp - метка времени
 // frame - объект кадра  
 async function mainLoop(timestamp, frame) {
@@ -1282,7 +1285,7 @@ setupMobileDebug()
 // Инициализация приложения
 init()
 
-// Запуск приложения и главного цикла рендеринга и анимации
+// Запуск приложения и главного цикла рендеринга, обновления и анимации
 main()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Разобраться с асинхронными функциями, по крайней мере часть из них могут быть и неасинхронными.
