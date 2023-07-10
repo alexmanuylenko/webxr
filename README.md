@@ -30,7 +30,9 @@ npm run deploy
 
 - Вытянув репозиторий по ссылке https://github.com/alexmanuylenko/webxr.git соответственно командой: 
 
+``` bash
 git clone https://github.com/alexmanuylenko/webxr.git
+```
 
 - Нажав на зеленую кнопку "Code" -> "Download ZIP"
 
