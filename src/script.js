@@ -512,7 +512,7 @@ function log(message) {
 
 // Настройка мобильной отладки, в частности консоли
 // Внимание: В релизной версии эта функция должна быть закомментирована!
-// For image tracking we need a mobile debug console as it only works on android.
+// For image tracking we need a mobile debug console as it only works on Android.
 // This library is very big so only use it while debugging - just comment it out when your app is done.
 function setupMobileDebug() {
 
@@ -723,7 +723,7 @@ async function init() {
   // TODO (это на будущее)
   // header = document.getElementById('header')
 
-  // Берем канву, "холст" для вывода графики из элемента <canvas> с id='canvas.webgl'
+  // Берем канву, "холст" для вывода графики из элемента <canvas> с селектором '.webgl'
   canvas = document.querySelector('canvas.webgl')
 
   // Создаем нашу главную трехмерную сцену
