@@ -25,7 +25,7 @@ npm run deploy
 - Visual Studio Code
 - Node.js
 - Git
-- GitExtentions (опционально, в VS Code есть контроль версий)
+- GitExtensions (опционально, в VS Code есть контроль версий)
 - Консоль: Windows PowerShell или другая (тоже опционально, можно пользоваться консолью VS Code)
 
 Забрать исходный код проекта можно:
