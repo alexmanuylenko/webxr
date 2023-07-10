@@ -48,7 +48,7 @@ git clone https://github.com/alexmanuylenko/webxr.git
 npm install
 ```
 
-Ппредполагается, что Node.js установлен.
+Предполагается, что Node.js установлен.
 
 2) Отладочный сервер запускается командой: 
 
