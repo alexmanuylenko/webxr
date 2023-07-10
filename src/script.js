@@ -316,7 +316,7 @@ function createHud(_scene, _camera) {
   // Создаем материал на основе текстуры из 2D-контекста
   const hudMaterial = new THREE.MeshBasicMaterial({
     map: hudTexture, // Наша текстура из 2D-контекста
-    depthTest: false, // Отключаем тест глубины (z-буфер) для поаерхности
+    depthTest: false, // Отключаем тест глубины (z-буфер) для поверхности
     transparent: true, // Прозрачный материал
   })
   
@@ -481,17 +481,17 @@ function updateHud() {
 
     //Вывод Custom-ных метрик, наблюдаемых значений
     if (hudCustom1) { // Если величина определена
-      hudCtx.font = "11px"; // Шрифт цифр
+      hudCtx.font = "11px"; // Шрифт цифр и/или букв
       hudCtx.fillStyle = "#ffffff";  // Стиль заливки
       hudCtx.fillText(hudCustom1, 0, 29); // Выводим значение кастомной величины 1
     }
     if (hudCustom2) { // Если величина определена
-      hudCtx.font = "11px"; // Шрифт цифр
+      hudCtx.font = "11px"; // Шрифт цифр и/или букв
       hudCtx.fillStyle = "#ffffff"; // Стиль заливки
       hudCtx.fillText(hudCustom2, 0, 45); // Выводим значение кастомной величины 2
     }
     if (hudCustom3) { // Если величина определена
-      hudCtx.font = "11px"; // Шрифт цифр
+      hudCtx.font = "11px"; // Шрифт цифр и/или букв
       hudCtx.fillStyle = "#ffffff"; // Стиль заливки
       hudCtx.fillText(hudCustom3, 0, 61); // Выводим значение кастомной величины 3
     }
