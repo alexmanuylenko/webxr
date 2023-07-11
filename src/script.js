@@ -514,24 +514,20 @@ function log(message) {
 // Внимание: В релизной версии эта функция должна быть закомментирована!
 // For image tracking we need a mobile debug console as it only works on Android.
 // This library is very big so only use it while debugging - just comment it out when your app is done.
-function setupMobileDebug() {
-
-  // Получить элемент <div> с id="console-ui" страницы для вывода консоли
-  const containerEl = document.getElementById("console-ui");
-  
-  // Инициализировать библиотеку отладочной консоли
-  eruda.init({
-    container: containerEl // Назначить контейнерный элемент для консоли
-  });
-
-  // Инициализировать инструменты разработки и отладки консоли
-  // Запрос селектора из Shadow DOM
-  const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
-  
-  // Высота отладочной консоли = 40% экрана
-  // control the height of the dev tool panel
-  devToolEl.style.height = '40%';
-}
+// function setupMobileDebug() {
+//   // Получить элемент <div> с id="console-ui" страницы для вывода консоли
+//   const containerEl = document.getElementById("console-ui");
+//   // Инициализировать библиотеку отладочной консоли
+//   eruda.init({
+//     container: containerEl // Назначить контейнерный элемент для консоли
+//   });
+//   // Инициализировать инструменты разработки и отладки консоли
+//   // Запрос селектора из Shadow DOM
+//   const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
+//   // Высота отладочной консоли = 40% экрана
+//   // control the height of the dev tool panel
+//   devToolEl.style.height = '40%';
+// }
 
 // Обход верщин объекта obj и применение к ним функции callback
 // obj может быть составным объектом
@@ -705,10 +701,10 @@ function createARButton(imgBitmap) {
 
       // Это для мобильной отладки. В релизе нужно закомментировать! 
       // this is for the mobile debug
-      optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
+      // optionalFeatures: ["dom-overlay", "dom-overlay-for-handheld-ar"],
       
       // Это для мобильной отладки. В релизе нужно закомментировать!
-      domOverlay: { root: document.body }
+      // domOverlay: { root: document.body }
     }
   );
 
@@ -773,12 +769,12 @@ async function init() {
   scene.add(light)
 
   // Создаем HUD - Heads-Up Display, описание - см. выше
-  createHud(scene, camera)
+  // createHud(scene, camera)
 
   // Устанавливаем позицию дисплеев HUD в сцене
-  setHudX(HUD_POSITION.x)
-  setHudY(HUD_POSITION.y)
-  setHudZ(HUD_POSITION.z)
+  // setHudX(HUD_POSITION.x)
+  // setHudY(HUD_POSITION.y)
+  // setHudZ(HUD_POSITION.z)
 
   // Создаем загрузчик моделей
   const loader = new GLTFLoader()
@@ -1254,13 +1250,13 @@ async function mainLoop(timestamp, frame) {
   // Один проход:
 
   // Запуск таймера HUD, начало измерений (см. выше)
-  startHudTimer()
+  // startHudTimer()
 
   // Обновить объекты приложения и сцены
   update()
 
   // Обновить HUD
-  updateHud()
+  // updateHud()
 
   // Отрисовать кадр
   renderFrame(timestamp, frame)
@@ -1269,7 +1265,7 @@ async function mainLoop(timestamp, frame) {
   renderer.render(scene, camera)
 
   // Конец измерений, остановка таймера HUD (на самом деле остановки нет, точнее так не совсем корректно говорить - см. выше реализацию)
-  endHudTimer()
+  // endHudTimer()
 }
 
 // Главная функция приложения
@@ -1280,7 +1276,7 @@ function main() {
 
 // Настроить мобильную отладку
 // Внимание! Это должно быть закомментировано в релизе!
-setupMobileDebug()
+// setupMobileDebug()
 
 // Инициализация приложения
 init()
