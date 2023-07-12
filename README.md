@@ -64,7 +64,7 @@ npm run dev
 npm run build 
 ```
 
-собирает production bundle в подкаталог ```./dist``` (используется Webpack).
+собирает production bundle в подкаталог ```./app``` (используется Webpack).
 
 4) Команда 
 
