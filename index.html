@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script>
+            function getMobileOS() {
+              var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      
+              // Windows Phone must come first because its UA also contains "Android"
+              if (/windows phone/i.test(userAgent)) {
+                return "Windows Phone";
+              }
+      
+              // Android detection 
+              if (/Android/i.test(userAgent)) {
+                return "Android";
+              }
+      
+              // iOS detection 
+              if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                return "iOS";
+              }
+
+              return false;
+            }
+      
+            function DetectAndRedirect() {
+              if (getMobileOS() == "iOS") {
+                // window.location.href = "https://apps.apple.com/US/app/idOfYourAPP";
+                document.getElementById("iOSLink").click();
+              }
+              if (getMobileOS() == "Android") {
+                // window.location.href = "https://play.google.com/store/apps/details?id=com.your.AppName";
+                document.getElementById("androidLink").click();
+              }
+              if (getMobileOS() == "Windows Phone") {
+                // window.location.href = "https://www.microsoft.com/en-us/p/NameOfYourAPP";
+                document.getElementById("androidLink").click();
+              }
+              if (!getMobileOS()) {
+                // document.getElementById('not-mobile').innerHTML = "if not mobile show page with all links to store";
+                document.getElementById("androidLink").click();
+              }
+            };
+            // window.onload = function () {
+            //     DetectAndRedirect();
+            // };
+          </script>
+    </head>
+    <body onload="DetectAndRedirect()">
+        <div align="center">
+            <h4>Сейчас вы будете перенаправлены на страницу, соответствующую вашей операционной системе...</h4>
+            <p>Если автоматического перенаправления не произошло, нажмите на одну из ссылок ниже:</p>
+            <a id = "iOSLink" href = "./itsalive_fire.reality" rel = "ar">У меня iOS (iPhone/iPad/iPod)</a><br/>
+            <a id = "androidLink" href = "https://alexcubor.art/ar/fire_itsalive/app/">У меня Android или другая ОС</a>
+        </div>
+        <div id="not-mobile"></div>
+    </body>
+</html>

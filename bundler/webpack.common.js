@@ -25,7 +25,7 @@ module.exports = {
         filename: 'bundle.[contenthash].js',
 
         // Абсолютный путь к сборке:
-        path: path.resolve(__dirname, '../dist')
+        path: path.resolve(__dirname, '../app')
     },
 
     // Инструмент времени разработки "Карта исходников". Не уверен, что нужен нам и здесь.
