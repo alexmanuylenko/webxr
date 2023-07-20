@@ -1,59 +1,77 @@
+<!-- Это файли с редиректом, его надо положить в корень сайта, рядом с папкой ./app приложения. -->
+<!-- Рядом положить файл .reality для iOS (iPhone/iPad/iPod) -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> <!--Язык страницы по-умолчанию - английский-->
     <head>
-        <meta charset="UTF-8">
+        <meta charset="UTF-8"> <!--Кодировка UTF-8 - поддержка в том числе и русского языка-->
         <script>
+            // Функция определения операционной системы по пользовательскому агенту (User Agent) браузера пользователя
             function getMobileOS() {
+
+              // Получаем пользовательского агента
               var userAgent = navigator.userAgent || navigator.vendor || window.opera;
       
+              // Проверка на Windows Phone должна идти первой, так как его User Agent также содержит в себе слово "Android"
               // Windows Phone must come first because its UA also contains "Android"
               if (/windows phone/i.test(userAgent)) {
                 return "Windows Phone";
               }
       
+              // Определение ОС Android
               // Android detection 
               if (/Android/i.test(userAgent)) {
                 return "Android";
               }
       
+              // Определение ОС iOS
               // iOS detection 
               if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
                 return "iOS";
               }
-
+              
+              // Неизвестная ОС указана в User Agent
               return false;
             }
-      
+            
+            // Определяем ОС и перенаправляем пользователя соответствующим образом
             function DetectAndRedirect() {
-              if (getMobileOS() == "iOS") {
+
+              // Получаем идентификатор мобильной ОС пользователя
+              let mobileOS = getMobileOS()
+
+              // Если ОС iOS - кликаем по ссылке для ОС iOS
+              if (mobileOS == "iOS") {
                 // window.location.href = "https://apps.apple.com/US/app/idOfYourAPP";
                 document.getElementById("iOSLink").click();
               }
-              if (getMobileOS() == "Android") {
+
+              // Если ОС Android, Windows Phone или неизвестная ОС - кликаем по ссыслке для ОС Android
+              if (mobileOS == "Android" || mobileOS == "Windows Phone" || !mobileOS) {
                 // window.location.href = "https://play.google.com/store/apps/details?id=com.your.AppName";
                 document.getElementById("androidLink").click();
               }
-              if (getMobileOS() == "Windows Phone") {
-                // window.location.href = "https://www.microsoft.com/en-us/p/NameOfYourAPP";
-                document.getElementById("androidLink").click();
-              }
-              if (!getMobileOS()) {
-                // document.getElementById('not-mobile').innerHTML = "if not mobile show page with all links to store";
-                document.getElementById("androidLink").click();
-              }
-            };
+            };     
+            // Если будем использовать какой-нибудь фреймворк,
+            // то тэг <body onload="..."> обычно недоступен.
+            // Поэтому в этом случае делаем определение ОС и редирект при загрузке окна
             // window.onload = function () {
             //     DetectAndRedirect();
             // };
           </script>
     </head>
-    <body onload="DetectAndRedirect()">
-        <div align="center">
+    <body onload="DetectAndRedirect()"><!-- Определение ОС и редирект после загрузки документа -->
+        <div align="center"> <!--Информация для пользователя и ссылки на версии для разных ОС - по центру -->
+            <!-- Информация для пользователя -->
             <h4>Сейчас вы будете перенаправлены на страницу, соответствующую вашей операционной системе...</h4>
             <p>Если автоматического перенаправления не произошло, нажмите на одну из ссылок ниже:</p>
+            
+            <!-- Ссылка на версию для ОС iOS (iPhone/iPad/iPod) - файл .reality -->
             <a id = "iOSLink" href = "./itsalive_fire.reality" rel = "ar">У меня iOS (iPhone/iPad/iPod)</a><br/>
+            
+            <!-- Ссылка на версию для ОС Android, WindowsPhone и других - ссылка на веб-приложение в папке ./app -->
             <a id = "androidLink" href = "https://alexcubor.art/ar/fire_itsalive/app/">У меня Android или другая ОС</a>
         </div>
+        <!-- Служебный отладочный блок. Можно удалить. -->
         <div id="not-mobile"></div>
     </body>
 </html>
