@@ -43,12 +43,16 @@ import './style.css'
 const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fire_scene.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/leela.glb"
 // const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/bender.glb"
+// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/fry.glb"
+// const MESH_MODEL_FILE_NAME_URL = "https://alexmanuylenko.github.io/webxr-assets/zoidberg.glb"
 
 // URL файла с изображением маркера, который надо будет отслеживать и который будет изображен на полупрозрачной "рамке цели",
 // когда изображение маркера еще не найдено в окружающей среде
 const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fire_marker.jpg'
 // const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/leela.png'
 // const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/bender.png'
+// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/fry.png'
+// const TEXTURE_MARKER_IMAGE_FILE_NAME_URL = 'https://raw.githubusercontent.com/alexmanuylenko/webxr-assets/master/zoidberg.png'
 
 // Notes: Из-за всяческих CORS-особенностей файлы модели и маркера должны, в идеале, быть расположены на другом сервере, домене и так далее.
 // С чтением моделей и изображений локально возникли проблемы, они же возникли, если файлы-ассеты расположены на том же сервере и домене.
